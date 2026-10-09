@@ -15,6 +15,8 @@ import {
 } from '../dist/shared/workout/session.js';
 import { renderWorkoutProgram, extractProposal } from '../dist/shared/workout/openui-bridge.js';
 import { mockTurn, parseTargetSeconds } from '../dist/server/mock.js';
+import { createApp, readConfig } from '../dist/server/app.js';
+import { parseWorkoutSnapshot } from '../dist/shared/workout/session.js';
 import { validateProgram } from '../dist/shared/openui/validate.js';
 import { OPENUI_LIBRARY } from '../dist/shared/openui/openui-library.js';
 
@@ -346,8 +348,10 @@ test('mock parses time targets and asks when a shorten request has none', () => 
 
 test('mock ease reply does not claim a change that was not applied', () => {
   const eased = applyAdaptation(startSession(createWorkoutSession()), { intent: 'ease', revision: 2 }).session;
-  const turn = mockTurn({ messages: [{ role: 'user', content: 'make it easier' }], state: { ui_state: '', client_events: [], workout: JSON.stringify(eased) } }, '');
-  assert.match(turn.reply, /^Upcoming slots now have more breathing room\./);
+  const ask = events => mockTurn({ messages: [{ role: 'user', content: 'make it easier' }], state: { ui_state: '', client_events: events, workout: JSON.stringify(eased) } }, '').reply;
+  // Acknowledged only when the button's change is reported in this turn's events.
+  assert.match(ask(['Adaptation applied: Activity 40 → 25 seconds. Recovery 20 → 35 seconds.']), /^Upcoming slots now have more breathing room\./);
+  assert.match(ask([]), /^No change needed\./);
 
   const finished = endSession(startSession(createWorkoutSession()));
   const ended = mockTurn({ messages: [{ role: 'user', content: 'make it easier' }], state: { ui_state: '', client_events: [], workout: JSON.stringify(finished) } }, '');
@@ -384,4 +388,73 @@ test('preview shows the finish as trimmed by shorten, not the default 120s', () 
   assert.match(program, /Finish & cool-down \(80s\)/);
   assert.match(program, /0 main slots/);
   assert.doesNotThrow(() => validateProgram(program, OPENUI_LIBRARY));
+});
+
+test('shorten treats the target as an upper bound when shortening twice', () => {
+  let session = completeActiveInterval(startInterval(startSession(createWorkoutSession()), 'opening'));
+  session = applyAdaptation(session, { intent: 'shorten', seconds: 250, revision: session.revision }).session;
+  assert.equal(calculateRemainingSeconds(session), 250);
+  const second = applyAdaptation(session, { intent: 'shorten', seconds: 200, revision: session.revision });
+  assert.equal(second.applied, true);
+  assert.ok(calculateRemainingSeconds(second.session) <= 200);
+  assert.equal(second.session.intervals[0].status, 'completed');
+  assert.ok(second.session.intervals.at(-1).durationSeconds >= 30);
+
+  const fresh = startSession(createWorkoutSession());
+  const canonical = applyAdaptation(fresh, { intent: 'shorten', seconds: 300, revision: fresh.revision });
+  assert.equal(calculateRemainingSeconds(canonical.session), 300);
+});
+
+test('a rejected shorten is not answered with an earlier success', () => {
+  let session = completeActiveInterval(startInterval(startSession(createWorkoutSession()), 'opening'));
+  session = applyAdaptation(session, { intent: 'shorten', seconds: 250, revision: session.revision }).session;
+  const reply = mockTurn({ messages: [{ role: 'user', content: 'i have 10 seconds left' }], state: { ui_state: '', client_events: [], workout: JSON.stringify(session) } }, '').reply;
+  assert.match(reply, /^The plan stays as it is\. Cannot shorten to 10s/);
+});
+
+test('mock describes the state it is given instead of repeating a button action', () => {
+  let session = startInterval(startSession(createWorkoutSession()), 'opening');
+  session = completeActiveInterval(startInterval(completeActiveInterval(session), 'slot-1-work'));
+  assert.equal(session.activeIntervalId, 'slot-1-rest');
+  const reply = mockTurn({ messages: [{ role: 'user', content: 'Simulate interval finish' }], state: { ui_state: '', client_events: [], workout: JSON.stringify(session) } }, '').reply;
+  assert.match(reply, /^Work slot complete\. Slot 1: Recovery has started\./);
+  assert.match(reply, /timer_slot_1_rest = Timer\("Slot 1: Recovery", 20\)/);
+});
+
+test('duration parser takes whole tokens and never turns a negative into a budget', () => {
+  assert.equal(parseTargetSeconds('i have 1.5 minutes left'), 90);
+  assert.equal(parseTargetSeconds('i have -5 minutes left'), null);
+  assert.equal(parseTargetSeconds('i have 2.25 seconds'), null);
+  assert.equal(parseTargetSeconds('ten minutes'), 600);
+});
+
+test('snapshot decoder rejects malformed sessions', () => {
+  const good = startInterval(startSession(createWorkoutSession()), 'opening');
+  const variant = change => JSON.stringify(change(structuredClone(good)));
+  assert.ok(parseWorkoutSnapshot(JSON.stringify(good)));
+  assert.equal(parseWorkoutSnapshot('not json'), null);
+  assert.equal(parseWorkoutSnapshot(variant(s => { delete s.adaptationHistory; return s; })), null);
+  assert.equal(parseWorkoutSnapshot(variant(s => { s.intervals[2].id = s.intervals[1].id; return s; })), null);
+  assert.equal(parseWorkoutSnapshot(variant(s => { s.intervals[1].durationSeconds = 12.5; return s; })), null);
+  assert.equal(parseWorkoutSnapshot(variant(s => { s.intervals[0].status = 'completed'; s.activeIntervalId = null; return s; })), null);
+});
+
+test('server rejects a malformed workout snapshot before calling any provider', async () => {
+  let providerCalls = 0;
+  const server = createApp(readConfig({ ALLOW_LIVE_API: 'true', OPENAI_API_KEY: 'fake' }, process.cwd()), async () => { providerCalls++; return new Response('{}'); });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const url = 'http://127.0.0.1:' + server.address().port;
+  try {
+    const { token } = await (await fetch(url + '/api/config')).json();
+    for (const provider of ['mock', 'openai-api']) {
+      const response = await fetch(url + '/api/turn', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Local-Token': token },
+        body: JSON.stringify({ provider, consent: true, fault: 'none', messages: [{ role: 'user', content: 'hi' }], state: { ui_state: '', client_events: [], workout: 'not json' } }),
+      });
+      assert.equal(response.status, 400);
+    }
+    assert.equal(providerCalls, 0);
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+  }
 });

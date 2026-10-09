@@ -5,6 +5,7 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { APP_VERSION, SCHEMA_VERSION, isRequest, isTurn, type Versions, type Result } from '../shared/contracts.js';
 import { mockTurn } from './mock.js';
+import { parseWorkoutSnapshot } from '../shared/workout/session.js';
 import { loadPrompt } from './prompt.js';
 import { ScreenDocument } from '../shared/openui/document.js';
 import { liveTurn, PublicError } from './provider.js';
@@ -51,6 +52,7 @@ export function createApp(config: Config, transport: typeof fetch = fetch, cliTr
         if (req.headers['content-type'] !== 'application/json') throw new PublicError('INPUT', 'Expected application/json.', 415);
         const input = await readBody(req);
         if (!isRequest(input)) throw new PublicError('INPUT', 'The conversation request is invalid. Reset and try again.', 400);
+        if (input.state.workout != null && !parseWorkoutSnapshot(input.state.workout)) throw new PublicError('INPUT', 'The workout snapshot is invalid. Restart the demo session and try again.', 400);
         if (input.provider === 'codex-cli') await codexTurn();
         const provider = providerStatuses(config).find(item => item.id === input.provider)!;
         if (!provider.enabled || (input.provider !== 'mock' && !input.consent)) throw new PublicError('OPT_IN', 'This provider needs local setup and explicit usage consent before sending. Check the provider selector and README.', 403);

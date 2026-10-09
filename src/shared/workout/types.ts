@@ -36,7 +36,7 @@ export type WorkoutActionKind =
 export interface WorkoutActionRecord {
   action: WorkoutActionKind;
   intervalId?: string;
-  source: 'user' | 'timer' | 'batch' | 'model';
+  source: 'user' | 'timer' | 'auto' | 'batch' | 'model';
   at: string;
   details?: string;
 }

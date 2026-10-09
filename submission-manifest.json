@@ -8,11 +8,19 @@
       "status": "modified"
     },
     {
+      "path": "docs/RUNTIMES.md",
+      "status": "modified"
+    },
+    {
       "path": "README.md",
       "status": "modified"
     },
     {
       "path": "skills/workout.md",
+      "status": "modified"
+    },
+    {
+      "path": "src/server/app.ts",
       "status": "modified"
     },
     {
@@ -115,12 +123,12 @@
     "AGENTS.md": "0732eec4682840a66d00db360cb54fc5a62fa881fc3e77da9c994cb0a619e3f5",
     "docs/EXERCISE.md": "b1b5ffc20b5e2d8190e71f1fbb27e70d82e79c11b37603cd09752891a15a5820",
     "docs/HARNESS.md": "881ae21fc87cb39b41f540519033a2c2c6396e24388d7b863d26372fb0d9549f",
-    "docs/RUNTIMES.md": "865086d2d31d43c6ba631b7106baad35d01c473bc144653fd541f8b950fd6abf",
+    "docs/RUNTIMES.md": "924430f460533bbbf393081b0f0dda47b8b79c80a23340a0e7c831e448c5573a",
     "evidence/screenshots/01-preview.png": "7803fcf9125ba1da366929f72edb8437966ffdae20390fa9440a08d204f8f387",
-    "evidence/screenshots/02-active-slot.png": "255b77db00a2cc9aa1956d46770b28897986d2ef66285e7c3d14ffc313b8dc33",
-    "evidence/screenshots/03-checkin-eased.png": "818421c7d485f9c7c2348121bcc84b2aa7e6397bbe826806d9e726f9f7aade11",
-    "evidence/screenshots/04-recap.png": "86c608795e17a09c67863b389c9e571f4d5684ccc7b033ed94fc561de24996c8",
-    "evidence/screenshots/05-mobile-active.png": "5596f900a689e52edf8d729dd4fb12673a5bdcf4fac72261abdbfc8d2f590799",
+    "evidence/screenshots/02-active-slot.png": "e9227e9295122600297cc75610a59c083f932b0d0ab6c6060e4ce21e3411ca8f",
+    "evidence/screenshots/03-checkin-eased.png": "d41c34575fd606907e6c8860723c402d3483f5d0a4689379ab21f9b54230a536",
+    "evidence/screenshots/04-recap.png": "c0e3e11d617828eccf3ee3653107348cc14dee7d18c2df986614764a4e7c8e54",
+    "evidence/screenshots/05-mobile-active.png": "9ee6de98cd25c8658cdf1d62bfe47c5f2ccfa5c0295bb6b0d9926ce54a0a04ce",
     "evidence/screenshots/06-live-claude.png": "3055c0c14bc85f420482cc366a29c0bd605426cd653c0f024dd7f6105ae6eadb",
     "examples/wiring.openui": "c9b83ae435f3b96c721da9502a5a77b36052bf5035101d56b58fa215a8e54324",
     "package-lock.json": "ea3dff87ebda23e276a90d9006720a48d2c4e6c8c429bbf80936e9713bb1933d",
@@ -128,17 +136,17 @@
     "playwright.config.mjs": "118aac1c8e8f3d40e9b1562b5b88503a34e22568793357ffe89483108b9a6d65",
     "prompts/context.md": "e4732a5acd27c946e8ee18f967b3d5a7b3de158036be98542fc2f73e46130c73",
     "prompts/system.md": "cda5716bc1d0793b171ec52969e06ac47a1ae771e1cd6a539b11c82b832688c8",
-    "README.md": "76152930b7abb9c4766097b445371511315d44db5420f2138a7b51f0b3b30e11",
+    "README.md": "649596d6c449e88f0381421d67ea7484c7bdbf7bbb9b0dbe560314db6bd9bdde",
     "runs/claude-cli-live.json": "42283f844c0c7d96eb7c9ba6c5c3beeeed22633c188e27fa362f5d2eacac6fcd",
     "scripts/build.mjs": "044dc54fed3c9c7ef29a3ad50575fdcabd1aeaa605f70c2e60ceb750cdd1e564",
     "scripts/lint.mjs": "c9132cec1cd4d309853355a196baa76c1bd0b2e94b0c745a008bfc0dbb1916f4",
     "scripts/package.mjs": "57ff07fffe805c5814375e20d9ac4d787d54764357bff40db7c64a6c512b84c6",
     "skills/workout.md": "ac292143153494638c90c39d3db0a4039396df778983f8f2106f0bf19e7523e0",
-    "src/server/app.ts": "259212371804a11a36ddd3c1024df70f6ecf02763858af77a1c77b910378d1da",
+    "src/server/app.ts": "19c1a41c099a4599e262a543d9c650d2890b723df2bdc10426a5d4c35184cef2",
     "src/server/cli.ts": "36219d623a44f54a2fa27455e4260eaa17f0e98cfe00092cdd87519c5c929924",
     "src/server/config.ts": "1b2bc2e6a53f65ff37f7609b264a5713215f14131629c20750c872f987c89f69",
     "src/server/main.ts": "949703463e21f003dd298eaa80d89e09b6ad2475c90569651b7690e746352c2f",
-    "src/server/mock.ts": "96ab74b83440d6763dfb72df5be775adba9d2a31b7d04cb0fdee8830888acaad",
+    "src/server/mock.ts": "44452148cda3551201ddb72a49bb9ae8264ca7a055383e1cb99a110660e49df2",
     "src/server/prompt.ts": "764ea10d80597f3332319399e11d76ad209859497a715beb7fe86f42c025e602",
     "src/server/provider.ts": "d8ec6048bddf6485ea5306385d1f935c367032b662ed6218799b53376032f366",
     "src/server/subprocess.ts": "f0fb9c12f6e371e447974f77dbc577c5db4285edf3d840a18fd8f3d5881e13c7",
@@ -156,19 +164,19 @@
     "src/shared/redact.ts": "126cf5fb154d1cddd0f3eb8f168e89701e80f524c440c537f4fef5b444431222",
     "src/shared/schema.ts": "d466e4028d754be7729b9eedcf395faf2129406782bdc1aa47a2f89533568bcb",
     "src/shared/workout/openui-bridge.ts": "8c01b37c618eba9d78ebb486e3d2848c93c652d0795b110f50f8a4bc2af6b490",
-    "src/shared/workout/session.ts": "afeb4a52d648c47a79cf1162025394763d04ef11ca094f1cd9b36f076bb23f17",
-    "src/shared/workout/types.ts": "8d77dd99f29387ec71e1449ef9f81d445671dc7587ae12298e598a8e9d690c46",
-    "src/web/app.ts": "ff79c0685cf28525182d5b6247eb1da555efb30296476fd96dcdcb41b9dffd90",
+    "src/shared/workout/session.ts": "1de93d07c535eb2c4982133d67dc576f62d094e84816892b4fe6c201a46dbf17",
+    "src/shared/workout/types.ts": "effcce211cc34810fd41bfe2ab9a6d5378f7001f7517f81851cc1409f0b0f8de",
+    "src/web/app.ts": "a2e57572b71418651a03ad3afa966c7c32cc01868094d76d8f5d8fe1abb8734d",
     "src/web/components.ts": "3911ae80ce7e9a99e0e13287fb9b8b0fbd4ef14ec11fdbf6ba77ec00a8305538",
     "src/web/dom.ts": "59352bc4243ecc84610b69098b956fb1ddc794cc1ebe38b9302d1e166694b401",
     "src/web/index.html": "de7a99b3336dd5ea02c549630c783fea7876eba229569f984fb3dc76a70f8350",
     "src/web/styles.css": "e43c177c2e6aeab077b61fd710d4ed702a75cb32fe0ea50946e888cde395f2f0",
-    "tests/browser/app.spec.mjs": "a849cb3b0b6af51446c00bbfd29d85885f615b69d3638687310bce89c52e313a",
+    "tests/browser/app.spec.mjs": "3feaaa5d25000774316c5338eb86ecb57c7795b662e1cd6330a6c9e6aff7754f",
     "tests/cli.test.mjs": "2b9bf2e26ab4dcb0b421925eb5bc7281b1d5dc4e98f40097b26cb1a9b2b8a030",
     "tests/core.test.mjs": "df8ff8f84535b40c3e25a5bd5b85210ef6b764808cc7e6a7bfb43a5fb204b133",
     "tests/http.test.mjs": "71c40d456663bf23f2a161841d00f4c12e682b66b6fb5ceef8e265b19d92812d",
     "tests/package.test.mjs": "31334741b94a966dfa52da9e28d96d77ea451e69c76219fd2e895cd38c2e52c2",
-    "tests/workout.test.mjs": "aeb9f0dc026842527f134a076810f7b6442d4739888d74fe8b073bc93cda174a",
+    "tests/workout.test.mjs": "327c208c961f3f602d4b7b847214c35071e5260b35ac08cccf951a66de17fb29",
     "tsconfig.json": "689b9d5e639349067d9542489e0ba9d1a11ca1581fa51934a55d46bf41e76626"
   },
   "runFiles": [

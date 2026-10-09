@@ -152,19 +152,16 @@ function ease(session: WorkoutSession): Change {
   return adapted(session, 'ease', intervals, 'Activity 40 → 25 seconds. Recovery 20 → 35 seconds.', { profile: 'low-energy' });
 }
 
-// Drop whole untouched slots from the end first, then trim the finish (never
-// below 30s). The active interval is never cut.
-function shorten(session: WorkoutSession, target: number, activeTimerRemaining?: number): Change {
-  if (!Number.isInteger(target) || target <= 0 || target > 3600) return { session, applied: false, summary: 'Invalid shorten target duration.' };
-  const before = calculateRemainingSeconds(session, activeTimerRemaining);
-  if (before <= target) return { session, applied: false, summary: `Session remaining time (${before}s) is already within the ${target}s limit.` };
-
+// One pass over the untouched slots, last first, then the finish (never below 30s).
+// With overshoot off, a slot is dropped only if the plan stays at or above the target.
+function trim(session: WorkoutSession, start: number, target: number, overshoot: boolean) {
   const intervals = [...session.intervals];
-  let remaining = before;
+  let remaining = start;
   let removed = 0;
   for (const [w, r] of untouchedSlots(intervals).reverse()) {
     const length = intervals[w].durationSeconds + intervals[r].durationSeconds;
-    if (remaining - length < target) continue;
+    if (remaining <= target) break;
+    if (!overshoot && remaining - length < target) continue;
     intervals[w] = { ...intervals[w], status: 'removed' };
     intervals[r] = { ...intervals[r], status: 'removed' };
     remaining -= length;
@@ -176,11 +173,23 @@ function shorten(session: WorkoutSession, target: number, activeTimerRemaining?:
     remaining -= intervals[finish].durationSeconds - trimmed;
     intervals[finish] = { ...intervals[finish], durationSeconds: trimmed };
   }
+  return { intervals, remaining, removed };
+}
+
+// The target is an upper bound. Prefer an exact fit that keeps as much work as possible;
+// if none exists, drop whole slots until the plan fits. The active interval is never cut.
+function shorten(session: WorkoutSession, target: number, activeTimerRemaining?: number): Change {
+  if (!Number.isInteger(target) || target <= 0 || target > 3600) return { session, applied: false, summary: 'Invalid shorten target duration.' };
+  const before = calculateRemainingSeconds(session, activeTimerRemaining);
+  if (before <= target) return { session, applied: false, summary: `Session remaining time (${before}s) is already within the ${target}s limit.` };
+
+  let result = trim(session, before, target, false);
+  if (result.remaining > target) result = trim(session, before, target, true);
+  const { intervals, remaining, removed } = result;
 
   if (remaining > target) {
     return { session, applied: false, summary: `Cannot shorten to ${target}s without clipping protected work (${remaining}s minimum required). Consider ending the session instead.` };
   }
-  if (remaining === before) return { session, applied: false, summary: 'Cannot shorten further without clipping protected active intervals.' };
   return adapted(session, 'shorten', intervals, `Session adjusted to fit remaining limit: ${remaining} seconds remaining (${removed} slots trimmed).`);
 }
 
@@ -194,7 +203,6 @@ export function applyAdaptation(session: WorkoutSession, proposal: WorkoutPropos
 }
 
 const STAGES = ['welcome', 'preview', 'active', 'checkin', 'recap'];
-const KINDS = ['opening', 'activity', 'recovery', 'finish'];
 const STATUSES = ['pending', 'active', 'completed', 'skipped', 'removed'];
 
 // The session round-trips through the browser and request body, so check its
@@ -209,19 +217,26 @@ export function validateWorkoutSession(raw: unknown): WorkoutSession | null {
   if (!Array.isArray(s.intervals) || s.intervals.length !== 2 * SLOTS + 2) return null;
 
   const intervals = s.intervals as Record<string, unknown>[];
-  const wellFormed = intervals.every(i => typeof i === 'object' && i !== null
-    && typeof i.id === 'string' && i.id !== ''
-    && KINDS.includes(i.kind as string)
+  const expected = createDefaultIntervals();
+  const wellFormed = intervals.every((i, n) => typeof i === 'object' && i !== null
+    && i.id === expected[n].id && i.kind === expected[n].kind
     && typeof i.label === 'string' && i.label !== ''
-    && typeof i.durationSeconds === 'number' && i.durationSeconds > 0
+    && Number.isInteger(i.durationSeconds) && (i.durationSeconds as number) > 0 && (i.durationSeconds as number) <= 3600
     && STATUSES.includes(i.status as string));
   if (!wellFormed) return null;
 
+  const history = s.adaptationHistory;
+  if (!Array.isArray(history) || !history.every(a => typeof a === 'object' && a !== null && ['keep', 'ease', 'shorten'].includes(a.intent) && typeof a.summary === 'string')) return null;
+  if (s.actionHistory !== undefined && !Array.isArray(s.actionHistory)) return null;
+
+  // Exactly one active interval in the 'active' stage, and none in any other.
   const active = intervals.filter(i => i.status === 'active');
-  if (active.length > 1) return null;
-  if (s.activeIntervalId !== null && typeof s.activeIntervalId !== 'string') return null;
-  if (s.activeIntervalId === null ? active.length !== 0 : active[0]?.id !== s.activeIntervalId) return null;
+  if (s.stage === 'active' ? active.length !== 1 || active[0].id !== s.activeIntervalId : active.length !== 0 || s.activeIntervalId !== null) return null;
   return raw as WorkoutSession;
+}
+
+export function parseWorkoutSnapshot(json: string): WorkoutSession | null {
+  try { return validateWorkoutSession(JSON.parse(json)); } catch { return null; }
 }
 
 export function getRecapSummary(session: WorkoutSession): WorkoutRecapSummary {

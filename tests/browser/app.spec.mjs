@@ -36,7 +36,7 @@ test('configured CLI needs explicit consent and records fake provider identity',
 test('full 90-second workout flow: preview, adaptations and simulation to recap', async ({ page }) => {
  await page.locator('#btn-start-demo').click();
  await expect(page.locator('#screen')).toContainText('Session preview');
- await send(page, 'start opening');
+ await tap(page, page.locator('#screen').getByRole('button', { name: 'Start opening', exact: true }));
  await expect(page.locator('#screen')).toContainText('Opening warm-up');
  await page.getByRole('button', { name: 'Simulate finish', exact: true }).click();
  await expect(page.locator('#screen')).toContainText('How does this pace fit?');
@@ -111,4 +111,70 @@ test('remaining planned time counts down with the running interval timer', async
  const [total, clock] = await page.evaluate(() => [document.querySelector('[data-statement="remainingStat"] strong').textContent, document.querySelector('.timer strong').textContent]);
  const secs = t => { const [m, s] = t.split(':').map(Number); return m * 60 + s; };
  expect(secs(total) - secs(clock)).toBe(600);
+});
+test('typed text never runs a session command, even when it names one', async ({ page }) => {
+ const button = name => page.locator('#screen').getByRole('button', { name, exact: true });
+ await tap(page, page.locator('#btn-start-demo'));
+ await tap(page, button('Start opening'));
+ await tap(page, button('Simulate interval finish'));
+ await send(page, 'do not end session yet');
+ const state = JSON.parse(await page.locator('#state-json').textContent());
+ expect(state.workout.stage).toBe('checkin');
+ await expect(page.locator('#screen')).toContainText('How does this pace fit?');
+});
+test('workout buttons work without an available provider and send nothing', async ({ page }) => {
+ let turns = 0; page.on('request', r => { if (r.url().includes('/api/turn')) turns++; });
+ await page.locator('#provider').selectOption('claude-cli');
+ await page.locator('#btn-start-demo').click();
+ const button = name => page.locator('#screen').getByRole('button', { name, exact: true });
+ await button('Start opening').click();
+ await button('Simulate interval finish').click();
+ await button('End session').click();
+ await expect(page.locator('#screen')).toContainText('Session ended early');
+ await expect(page.locator('#error')).toBeHidden();
+ expect(turns).toBe(0);
+});
+test('a proposal from before the session moved on is not applied', async ({ page }) => {
+ await tap(page, page.locator('#btn-start-demo'));
+ await tap(page, page.locator('#screen').getByRole('button', { name: 'Start opening', exact: true }));
+ await page.locator('.builder').evaluate(e => e.open = true);
+ await page.locator('#fault').selectOption('slow');
+ await page.locator('#message').fill('please make it gentler');
+ await page.locator('#send').click();
+ await expect(page.locator('#pending')).toBeVisible();
+ await page.getByRole('button', { name: 'Simulate finish', exact: true }).click();
+ await expect(page.locator('#screen')).toContainText('How does this pace fit?');
+ await expect(page.locator('#pending')).toBeHidden({ timeout: 10000 });
+ await expect(page.locator('#transcript')).toContainText('Coach proposal not applied');
+ const state = JSON.parse(await page.locator('#state-json').textContent());
+ expect(state.workout.adaptationHistory).toHaveLength(0);
+});
+test('builder patches cannot overwrite the workout screen', async ({ page }) => {
+ await tap(page, page.locator('#btn-start-demo'));
+ await page.locator('.builder').evaluate(e => e.open = true);
+ await page.locator('#patch').fill('remainingStat = Keyword("99:00", "Remaining planned time")');
+ await page.locator('#apply-patch').click();
+ await expect(page.locator('#patch-status')).toContainText('Patches are for the wiring sample');
+ await expect(page.locator('#screen')).not.toContainText('99:00');
+});
+test('action history records automatic recovery starts and how each interval ended', async ({ page }) => {
+ const button = name => page.locator('#screen').getByRole('button', { name, exact: true });
+ await tap(page, page.locator('#btn-start-demo'));
+ await tap(page, button('Start opening'));
+ await tap(page, button('Simulate interval finish'));
+ await tap(page, button('Continue next slot'));
+ await page.getByRole('button', { name: 'Simulate finish', exact: true }).click();
+ await expect(page.locator('#screen')).toContainText('Slot 1: Recovery');
+ const history = JSON.parse(await page.locator('#state-json').textContent()).workout.actionHistory;
+ expect(history).toContainEqual(expect.objectContaining({ action: 'complete-interval', intervalId: 'slot-1-work', source: 'user' }));
+ expect(history).toContainEqual(expect.objectContaining({ action: 'start-interval', intervalId: 'slot-1-rest', source: 'auto' }));
+});
+test('a wiring-only export carries no workout data', async ({ page }) => {
+ await demo(page);
+ const download = page.waitForEvent('download');
+ await page.locator('#export').click();
+ let content = ''; for await (const chunk of await (await download).createReadStream()) content += chunk;
+ const json = JSON.parse(content);
+ expect(json.workout).toBeUndefined();
+ expect(json.recap).toBeUndefined();
 });
