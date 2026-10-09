@@ -1,0 +1,387 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  createWorkoutSession,
+  startSession,
+  startInterval,
+  completeActiveInterval,
+  skipActiveInterval,
+  endSession,
+  applyAdaptation,
+  calculateRemainingSeconds,
+  getRecapSummary,
+  validateWorkoutSession,
+  DEFAULT_PLANNED_SECONDS,
+} from '../dist/shared/workout/session.js';
+import { renderWorkoutProgram, extractProposal } from '../dist/shared/workout/openui-bridge.js';
+import { mockTurn, parseTargetSeconds } from '../dist/server/mock.js';
+import { validateProgram } from '../dist/shared/openui/validate.js';
+import { OPENUI_LIBRARY } from '../dist/shared/openui/openui-library.js';
+
+test('default workout session is exactly 720 planned seconds across opening, 8 slots and finish', () => {
+  const session = createWorkoutSession();
+  assert.equal(session.profile, 'steady');
+  assert.equal(session.stage, 'welcome');
+  assert.equal(session.revision, 1);
+
+  // 1 opening + 8 * 2 (work+rest) + 1 finish = 18 intervals
+  assert.equal(session.intervals.length, 18);
+  assert.equal(session.intervals[0].kind, 'opening');
+  assert.equal(session.intervals[0].durationSeconds, 120);
+
+  assert.equal(session.intervals[1].activityLabel, 'Tempo squat');
+  assert.equal(session.intervals[1].durationSeconds, 40);
+  assert.equal(session.intervals[2].kind, 'recovery');
+  assert.equal(session.intervals[2].durationSeconds, 20);
+
+  assert.equal(session.intervals[3].activityLabel, 'Standing reach');
+  assert.equal(session.intervals[3].durationSeconds, 40);
+
+  assert.equal(session.intervals.at(-1).kind, 'finish');
+  assert.equal(session.intervals.at(-1).durationSeconds, 120);
+
+  const total = calculateRemainingSeconds(session);
+  assert.equal(total, DEFAULT_PLANNED_SECONDS);
+  assert.equal(total, 720);
+});
+
+test('interval lifecycle: start, complete, and skip advance revision and record status', () => {
+  let session = createWorkoutSession();
+  session = startSession(session);
+  assert.equal(session.stage, 'preview');
+  assert.equal(session.revision, 2);
+
+  session = startInterval(session, 'opening');
+  assert.equal(session.stage, 'active');
+  assert.equal(session.activeIntervalId, 'opening');
+  assert.equal(session.intervals[0].status, 'active');
+  assert.equal(session.revision, 3);
+
+  session = completeActiveInterval(session);
+  assert.equal(session.activeIntervalId, null);
+  assert.equal(session.intervals[0].status, 'completed');
+  assert.equal(session.stage, 'checkin');
+  assert.equal(session.revision, 4);
+
+  session = startInterval(session, 'slot-1-work');
+  assert.equal(session.activeIntervalId, 'slot-1-work');
+
+  // Skipping a work slot still runs its recovery
+  session = skipActiveInterval(session);
+  assert.equal(session.intervals[1].status, 'skipped');
+  assert.equal(session.activeIntervalId, 'slot-1-rest');
+  assert.equal(session.stage, 'active');
+});
+
+test('adaptation "ease" changes pending slots to 25s/35s without altering completed history', () => {
+  let session = createWorkoutSession();
+  session = startInterval(session, 'opening');
+  session = completeActiveInterval(session);
+
+  assert.equal(session.intervals[0].status, 'completed');
+  assert.equal(session.intervals[0].durationSeconds, 120);
+
+  const result = applyAdaptation(session, { intent: 'ease', revision: session.revision });
+  assert.equal(result.applied, true);
+  session = result.session;
+
+  assert.equal(session.intervals[1].durationSeconds, 25);
+  assert.equal(session.intervals[2].durationSeconds, 35);
+
+  assert.equal(session.intervals[1].durationSeconds + session.intervals[2].durationSeconds, 60);
+
+  // Ease is idempotent
+  const secondEase = applyAdaptation(session, { intent: 'ease', revision: session.revision });
+  assert.equal(secondEase.applied, false);
+});
+
+test('ease modifies only wholly pending slot pairs and protects active slot recovery', () => {
+  let session = createWorkoutSession();
+  session = startInterval(session, 'opening');
+  session = completeActiveInterval(session);
+  session = startInterval(session, 'slot-1-work');
+  assert.equal(session.activeIntervalId, 'slot-1-work');
+
+  const result = applyAdaptation(session, { intent: 'ease', revision: session.revision }, 10);
+  assert.equal(result.applied, true);
+
+  // Slot 1 work (active) and slot 1 rest (pending) should NOT be modified because slot 1 is partially consumed
+  assert.equal(result.session.intervals[1].durationSeconds, 40);
+  assert.equal(result.session.intervals[2].durationSeconds, 20);
+
+  assert.equal(result.session.intervals[3].durationSeconds, 25);
+  assert.equal(result.session.intervals[4].durationSeconds, 35);
+});
+
+test('adaptation "shorten" trims upcoming slots to fit target limit while protecting active and finish', () => {
+  let session = createWorkoutSession();
+  session = startInterval(session, 'opening');
+  session = completeActiveInterval(session);
+
+  session = applyAdaptation(session, { intent: 'ease', revision: session.revision }).session;
+
+  const result = applyAdaptation(session, { intent: 'shorten', seconds: 300, revision: session.revision });
+  assert.equal(result.applied, true);
+  session = result.session;
+
+  const remaining = calculateRemainingSeconds(session);
+  assert.equal(remaining, 300);
+
+  const removed = session.intervals.filter(i => i.status === 'removed');
+  assert(removed.length > 0);
+
+  const finish = session.intervals.find(i => i.id === 'finish');
+  assert.equal(finish.status, 'pending');
+  assert(finish.durationSeconds >= 30);
+});
+
+test('shorten rejects impossible target budgets without corrupting state', () => {
+  let session = createWorkoutSession();
+  session = startInterval(session, 'opening'); // 120s active
+
+  // Target 30s is impossible when 120s opening is active and protected
+  const impossible = applyAdaptation(session, { intent: 'shorten', seconds: 30, revision: session.revision }, 120);
+  assert.equal(impossible.applied, false);
+  assert.match(impossible.summary, /Cannot shorten to 30s/);
+  assert.equal(session.intervals.filter(i => i.status === 'removed').length, 0);
+
+  const impossible60 = applyAdaptation(session, { intent: 'shorten', seconds: 60, revision: session.revision }, 120);
+  assert.equal(impossible60.applied, false);
+
+  const invalidNegative = applyAdaptation(session, { intent: 'shorten', seconds: -5, revision: session.revision });
+  assert.equal(invalidNegative.applied, false);
+});
+
+test('proposal extraction rejects unfenced prose, malformed values, duplicate proposals, and extra seconds', () => {
+  const proseReply = 'Here is an example: proposal = Proposal("ease")\nHave a good workout!';
+  assert.equal(extractProposal(proseReply, 1), null);
+
+  const negativeReply = '```openui\nproposal1 = Proposal("shorten", -5)\n```';
+  assert.equal(extractProposal(negativeReply, 1), null);
+
+  const fractionalReply = '```openui\nproposal1 = Proposal("shorten", 0.5)\n```';
+  assert.equal(extractProposal(fractionalReply, 1), null);
+
+  const easeWithSeconds = '```openui\nproposal1 = Proposal("ease", 100)\n```';
+  assert.equal(extractProposal(easeWithSeconds, 1), null);
+
+  const duplicateReply = '```openui\nproposal1 = Proposal("ease")\nproposal2 = Proposal("shorten", 300)\n```';
+  assert.equal(extractProposal(duplicateReply, 1), null);
+
+  const validReply = '```openui\nproposal1 = Proposal("ease")\n```';
+  assert.deepEqual(extractProposal(validReply, 3, 'session-42'), {
+    intent: 'ease',
+    seconds: undefined,
+    revision: 3,
+    sessionId: 'session-42',
+  });
+});
+
+test('stale revision and mismatched session ID are rejected by applyAdaptation', () => {
+  const session = createWorkoutSession('steady', 'session-100');
+  assert.equal(session.revision, 1);
+
+  const staleRev = applyAdaptation(session, { intent: 'ease', revision: 5, sessionId: 'session-100' });
+  assert.equal(staleRev.applied, false);
+  assert.match(staleRev.summary, /Stale/);
+
+  const staleId = applyAdaptation(session, { intent: 'ease', revision: 1, sessionId: 'session-999' });
+  assert.equal(staleId.applied, false);
+  assert.match(staleId.summary, /Stale/);
+});
+
+test('validateWorkoutSession decodes valid sessions and rejects malformed snapshots', () => {
+  const valid = createWorkoutSession();
+  assert.notEqual(validateWorkoutSession(valid), null);
+
+  assert.equal(validateWorkoutSession(null), null);
+  assert.equal(validateWorkoutSession('string'), null);
+
+  assert.equal(validateWorkoutSession({ ...valid, intervals: [] }), null);
+
+  const twoActive = {
+    ...valid,
+    intervals: valid.intervals.map((item, idx) => idx < 2 ? { ...item, status: 'active' } : item),
+    activeIntervalId: 'opening',
+  };
+  assert.equal(validateWorkoutSession(twoActive), null);
+
+  const mismatchActive = { ...valid, activeIntervalId: 'nonexistent' };
+  assert.equal(validateWorkoutSession(mismatchActive), null);
+});
+
+test('ended session enforces terminal state and rejects further interval start or adaptations', () => {
+  let session = createWorkoutSession();
+  session = startInterval(session, 'opening');
+  session = endSession(session);
+  assert.equal(session.stage, 'recap');
+  assert.equal(session.activeIntervalId, null);
+
+  const postEndStart = startInterval(session, 'slot-1-work');
+  assert.equal(postEndStart.stage, 'recap');
+  assert.equal(postEndStart.activeIntervalId, null);
+
+  const postEndAdapt = applyAdaptation(session, { intent: 'ease', revision: session.revision });
+  assert.equal(postEndAdapt.applied, false);
+  assert.match(postEndAdapt.summary, /already ended/);
+});
+
+test('startInterval guards against multiple concurrent active intervals', () => {
+  let session = createWorkoutSession();
+  session = startInterval(session, 'opening');
+  assert.equal(session.activeIntervalId, 'opening');
+
+  const second = startInterval(session, 'slot-1-work');
+  assert.equal(second.activeIntervalId, 'opening');
+  assert.equal(second.intervals.filter(i => i.status === 'active').length, 1);
+});
+
+test('recap summary reconciles completed, skipped and removed counts accurately', () => {
+  let session = createWorkoutSession();
+  session = startInterval(session, 'opening');
+  session = completeActiveInterval(session); // 1 completed (120s)
+
+  session = startInterval(session, 'slot-1-work');
+  session = skipActiveInterval(session); // 1 skipped
+
+  session = applyAdaptation(session, { intent: 'shorten', seconds: 300, revision: session.revision }).session;
+
+  const recap = getRecapSummary(session);
+  assert.equal(recap.completedCount, 1);
+  assert.equal(recap.simulatedSecondsCompleted, 120);
+  assert.equal(recap.skippedCount, 1);
+  assert(recap.removedCount > 0);
+  assert.equal(recap.totalPlannedSeconds, 720);
+});
+
+test('openui bridge generates valid programs for all stages and extracts proposals', () => {
+  let session = createWorkoutSession();
+
+  const welcome = renderWorkoutProgram(session);
+  assert.doesNotThrow(() => validateProgram(welcome, OPENUI_LIBRARY));
+
+  session = startSession(session);
+  const preview = renderWorkoutProgram(session);
+  assert.doesNotThrow(() => validateProgram(preview, OPENUI_LIBRARY));
+
+  session = startInterval(session, 'opening');
+  const active = renderWorkoutProgram(session);
+  assert.doesNotThrow(() => validateProgram(active, OPENUI_LIBRARY));
+
+  session = completeActiveInterval(session);
+  const checkin = renderWorkoutProgram(session);
+  assert.doesNotThrow(() => validateProgram(checkin, OPENUI_LIBRARY));
+
+  const replyWithEase = 'We will ease the pace.\n```openui\nproposal1 = Proposal("ease")\n```';
+  const proposal = extractProposal(replyWithEase, 1);
+  assert.deepEqual(proposal, { intent: 'ease', seconds: undefined, revision: 1 });
+
+  const replyWithShorten = 'Shortening to 5 minutes.\n```openui\nproposal1 = Proposal("shorten", 300)\n```';
+  const proposalShorten = extractProposal(replyWithShorten, 2);
+  assert.deepEqual(proposalShorten, { intent: 'shorten', seconds: 300, revision: 2 });
+});
+
+test('finishing a work slot starts its recovery, then hands back at a check-in', () => {
+  let session = startInterval(startSession(createWorkoutSession()), 'opening');
+  session = completeActiveInterval(session);
+  assert.equal(session.stage, 'checkin');
+
+  session = startInterval(session, 'slot-1-work');
+  session = completeActiveInterval(session);
+  assert.equal(session.stage, 'active');
+  assert.equal(session.activeIntervalId, 'slot-1-rest');
+  assert.equal(session.intervals.find(i => i.id === 'slot-1-rest').status, 'active');
+
+  session = completeActiveInterval(session);
+  assert.equal(session.stage, 'checkin');
+  assert.equal(session.activeIntervalId, null);
+});
+
+test('the on-screen actions alone reach the recap, and every active screen has an active interval', () => {
+  let session = startSession(createWorkoutSession());
+  let steps = 0;
+  while (session.stage !== 'recap' && steps++ < 100) {
+    if (session.stage === 'active') {
+      assert.ok(session.activeIntervalId, 'active stage must have an active interval');
+      session = completeActiveInterval(session); // "Simulate interval finish"
+    } else {
+      session = startInterval(session); // "Start opening" / "Continue next slot"
+    }
+  }
+  assert.equal(session.stage, 'recap');
+  assert.equal(session.completionMode, 'completed');
+  assert.equal(getRecapSummary(session).completedCount, 18);
+});
+
+test('recap list items are serialized safely', () => {
+  let session = startInterval(startSession(createWorkoutSession()), 'opening');
+  session = completeActiveInterval(session);
+  session = applyAdaptation(session, { intent: 'ease', revision: session.revision }).session;
+  session = endSession(session);
+  const program = renderWorkoutProgram(session);
+  assert.match(program, /adaptItem0 = ListItem\("Activity 40 → 25 seconds\. Recovery 20 → 35 seconds\.", "bullet"\)/);
+  assert.doesNotThrow(() => validateProgram(program, OPENUI_LIBRARY));
+});
+
+test('mock parses time targets and asks when a shorten request has none', () => {
+  assert.equal(parseTargetSeconds('i have 5 minutes left'), 300);
+  assert.equal(parseTargetSeconds('only have three min'), 180);
+  assert.equal(parseTargetSeconds('shorten to 90s'), 90);
+  assert.equal(parseTargetSeconds('shorten it'), null);
+  assert.equal(parseTargetSeconds('9999 minutes'), null);
+
+  const started = startSession(createWorkoutSession());
+  const turn = text => mockTurn({ messages: [{ role: 'user', content: text }], state: { ui_state: '', client_events: [], workout: JSON.stringify(started) } }, '');
+
+  const ask = turn('Can you shorten it?');
+  assert.match(ask.reply, /How many minutes/);
+  assert.equal(extractProposal(ask.reply, started.revision), null);
+
+  const four = turn('I only have 4 minutes left');
+  assert.deepEqual(extractProposal(four.reply, started.revision), { intent: 'shorten', seconds: 240, revision: started.revision });
+
+  const keep = turn('This feels good, keep going');
+  assert.equal(extractProposal(keep.reply, started.revision).intent, 'keep');
+});
+
+test('mock ease reply does not claim a change that was not applied', () => {
+  const eased = applyAdaptation(startSession(createWorkoutSession()), { intent: 'ease', revision: 2 }).session;
+  const turn = mockTurn({ messages: [{ role: 'user', content: 'make it easier' }], state: { ui_state: '', client_events: [], workout: JSON.stringify(eased) } }, '');
+  assert.match(turn.reply, /^Upcoming slots now have more breathing room\./);
+
+  const finished = endSession(startSession(createWorkoutSession()));
+  const ended = mockTurn({ messages: [{ role: 'user', content: 'make it easier' }], state: { ui_state: '', client_events: [], workout: JSON.stringify(finished) } }, '');
+  assert.match(ended.reply, /^No change needed\. Session has already ended\./);
+});
+
+test('active heading counts only the slots still in the plan', () => {
+  let session = startInterval(startSession(createWorkoutSession()), 'opening');
+  session = completeActiveInterval(session);
+  assert.match(renderWorkoutProgram(startInterval(session, 'slot-1-work')), /Main slot 1 of 8 · Work/);
+  session = applyAdaptation(session, { intent: 'shorten', seconds: 240, revision: session.revision }).session;
+  const remaining = session.intervals.filter(i => i.kind === 'activity' && i.status === 'pending').length;
+  assert.match(renderWorkoutProgram(startInterval(session, 'slot-1-work')), new RegExp(`Main slot 1 of ${remaining} · Work`));
+});
+
+test('recap counts are pluralised and active cues describe the simulation without instructing movement', () => {
+  let session = startInterval(startSession(createWorkoutSession()), 'opening');
+  assert.match(renderWorkoutProgram(session), /Simulated warm-up in progress/);
+  session = completeActiveInterval(session);
+  session = startInterval(session, 'slot-1-work');
+  const active = renderWorkoutProgram(session);
+  assert.match(active, /Simulated work slot in progress/);
+  assert.doesNotMatch(active, /Maintain/);
+  const recap = renderWorkoutProgram(endSession(session));
+  assert.match(recap, /"1 interval completed \(2:00 simulated\)"/);
+  assert.match(recap, /"1 interval skipped"/);
+});
+
+test('preview shows the finish as trimmed by shorten, not the default 120s', () => {
+  const preview = startSession(createWorkoutSession());
+  const { session, applied } = applyAdaptation(preview, { intent: 'shorten', seconds: 200, revision: preview.revision });
+  assert.equal(applied, true);
+  const program = renderWorkoutProgram(session);
+  assert.match(program, /Finish & cool-down \(80s\)/);
+  assert.match(program, /0 main slots/);
+  assert.doesNotThrow(() => validateProgram(program, OPENUI_LIBRARY));
+});
