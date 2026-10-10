@@ -19,7 +19,7 @@ The app starts in Mock and needs no account or key. Click **Start demo session**
 
 **Find your pace** is a fictional 12-minute session: a warm-up, eight work/recovery slots alternating Tempo squat and Standing reach, and a cool-down. The coach checks in after the warm-up and after each recovery, and the rest of the plan changes when you ask it to.
 
-The main decision was to keep the model away from workout state. `src/shared/workout/session.ts` owns the plan as plain functions (start, finish, end, ease, shorten), and `openui-bridge.ts` renders every screen from it. The model reads the session and replies with a sentence or two, plus at most one `Proposal("ease")`, `Proposal("shorten", seconds)` or `Proposal("keep")`. The browser checks the proposal against the session revision it was made for, so anything that moved the session on while the model was replying (an interval finishing, another change, a restart) makes it stale. Buttons on screen apply their change locally whatever the provider's state; if a provider is ready, the coach is then told about the press so it can comment. Typed text never runs a command; it only goes to the coach.
+The main decision was to keep the model away from workout state. `src/shared/workout/session.ts` owns the plan as plain functions (start, finish, end, ease, shorten), and `openui-bridge.ts` renders every screen from it. The model reads the session and replies with a sentence or two, plus at most one `Proposal("ease")`, `Proposal("shorten", seconds)` or `Proposal("keep")`. The browser checks the proposal against the session revision it was made for, so anything that moved the session on while the model was replying (an interval finishing, another change, a restart) makes it stale. Buttons on screen apply their change locally whatever the provider's state; if a provider is ready and not already replying, the coach is then told about the press so it can comment. A button press never cancels a reply in progress. Typed text never runs a command; it only goes to the coach.
 
 Adaptations never rewrite what has already happened. Easing changes only slots that haven't started, from 40s/20s to 25s/35s. Shortening drops whole untouched slots from the end, then trims the cool-down (not below 30s); it never touches the running interval, and if the target can't be met it changes nothing and says why.
 
@@ -28,8 +28,8 @@ Out of scope on purpose: anything medical. The coach treats pain or injury as a 
 The recap is computed from session state, and **Download run JSON** under Builder tools exports the full action history. `evidence/screenshots/` has screenshots from the browser tests and from the live Claude run.
 
 ### 90-second reviewer walkthrough
-1. Click **Start demo session**, then **Start opening**, then **Simulate interval finish** to reach the first check-in.
-2. Click **Continue next slot** and **Simulate interval finish**: the work slot ends and its recovery starts automatically; finishing that returns to a check-in.
+1. Click **Start demo session**, then **Start opening**, then the timer's **Simulate finish** to reach the first check-in.
+2. Click **Continue next slot**, then **Simulate finish**: the work slot ends and its recovery starts automatically; finishing that returns to a check-in.
 3. Click **Make it easier** on the check-in screen: upcoming slots change from 40s/20s to 25s/35s.
 4. Type `I only have 4 minutes left` and press Enter: the coach replies with a Proposal and the remaining plan is trimmed to fit 240 seconds. (`shorten it` alone gets a follow-up question.)
 5. Keep clicking through, or use **Skip ahead to recap** to fast-forward the remaining intervals.
@@ -39,7 +39,7 @@ The recap is computed from session state, and **Download run JSON** under Builde
 
 | Mode | Status |
 | --- | --- |
-| **Mock** | Tested: `npm run check` (typecheck, lint, 65 unit tests) and `npm run test:ui` (19 Playwright tests, run with Google Chrome 154 via `PLAYWRIGHT_CHROME_PATH`), plus a manual click-through in the browser. Node 26.7 on macOS. |
+| **Mock** | Tested: `npm run check` (typecheck, lint, 65 unit tests) and `npm run test:ui` (23 Playwright tests, run with Google Chrome 154 via `PLAYWRIGHT_CHROME_PATH`), plus a manual click-through in the browser. Node 26.7 on macOS. |
 | **ClaudeCLI** | **Tested live** on 9 October 2026: Claude Code 2.1.278 with a Claude-plan login; the CLI reported `claude-sonnet-5`. One scripted 8-turn session: "too intense" → `Proposal("ease")`, applied; "shorten it" → asked how much time was left; "I only have 4 minutes left" → `Proposal("shorten", 240)`, applied; "my knee hurts" → the simulation/safety boundary and a suggestion to pause or end. Both adaptations are recorded with `source: "model"`. The export is in `runs/claude-cli-live.json` and a screenshot in `evidence/screenshots/06-live-claude.png`. The consent flow is also covered by the browser tests with a faked response. The run was recorded before the last round of fixes (button handling, proposal staleness, repeated shortening); the skill and the data sent to the model did not change. |
 | **OpenAIAPI** | Adapter unit tests with fake transports only. No live request. |
 | **CodexCLI** | Disabled by the starter; not tested. |
@@ -52,7 +52,7 @@ Mock is deterministic. It mirrors the skill's Proposal protocol for the requests
 - `src/shared/workout/`: session state, adaptations and screen rendering for the workout.
 - `prompts/`: output protocol and current-turn context.
 - `runs/claude-cli-live.json`: the exported live Claude run.
-- `evidence/screenshots/`: screenshots captured by the browser tests and the live run.
+- `evidence/screenshots/`: screenshots from the browser tests and the live run. Tests leave them alone unless you run `CAPTURE_EVIDENCE=1 npm run test:ui`.
 - `src/shared/openui/`: parser, component registry, validation, navigation, timers and serialization.
 - `src/web/`: browser renderers and presentation.
 - `src/server/`: prompt loading, local HTTP server, mock and model adapters.

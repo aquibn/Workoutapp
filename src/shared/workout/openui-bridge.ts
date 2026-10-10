@@ -84,7 +84,7 @@ export function renderWorkoutProgram(session: WorkoutSession, activeTimerRemaini
       part(intervalTimerKey(active.id), 'Timer', [active.label, active.durationSeconds]),
       part('nextNotice', 'Text', [next ? `Up next: ${next.label} (${next.durationSeconds}s)` : 'Final interval in progress', 'description']),
       part('remainingStat', 'Keyword', [remaining, 'Remaining planned time']),
-      part('activeActions', 'FollowUps', [['Simulate interval finish', 'Make it easier', 'I have 5 minutes left', 'End session']]),
+      part('activeActions', 'FollowUps', [['Make it easier', 'I have 5 minutes left', 'End session']]),
       part('activeCue', 'Cue', [CUES[active.kind]]),
     ]);
   }

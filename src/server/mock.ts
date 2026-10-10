@@ -48,7 +48,7 @@ export function mockTurn(request: RequestData, fixture: string): Turn {
     return say('Keeping the current pace. Continue when you are ready.', session, 'proposal1 = Proposal("keep")');
   }
 
-  if (/^(start demo session|start opening|simulate interval finish|continue next slot|end session|restart demo session)$/.test(last)) return say(describe(session));
+  if (/^(start demo session|start opening|continue next slot|end session|restart demo session)$/.test(last)) return say(describe(session));
   return say('I am the offline demo coach: I follow the on-screen options plus requests like "make it easier", "I have 5 minutes left" or "keep going". Mock mode does not read your skill; choose a live provider for free-form coaching.');
 }
 

@@ -305,7 +305,7 @@ test('the on-screen actions alone reach the recap, and every active screen has a
   while (session.stage !== 'recap' && steps++ < 100) {
     if (session.stage === 'active') {
       assert.ok(session.activeIntervalId, 'active stage must have an active interval');
-      session = completeActiveInterval(session); // "Simulate interval finish"
+      session = completeActiveInterval(session); // the timer's "Simulate finish"
     } else {
       session = startInterval(session); // "Start opening" / "Continue next slot"
     }
@@ -413,12 +413,10 @@ test('a rejected shorten is not answered with an earlier success', () => {
 });
 
 test('mock describes the state it is given instead of repeating a button action', () => {
-  let session = startInterval(startSession(createWorkoutSession()), 'opening');
-  session = completeActiveInterval(startInterval(completeActiveInterval(session), 'slot-1-work'));
-  assert.equal(session.activeIntervalId, 'slot-1-rest');
-  const reply = mockTurn({ messages: [{ role: 'user', content: 'Simulate interval finish' }], state: { ui_state: '', client_events: [], workout: JSON.stringify(session) } }, '').reply;
-  assert.match(reply, /^Work slot complete\. Slot 1: Recovery has started\./);
-  assert.match(reply, /timer_slot_1_rest = Timer\("Slot 1: Recovery", 20\)/);
+  const session = startInterval(startSession(createWorkoutSession()), 'opening');
+  const reply = mockTurn({ messages: [{ role: 'user', content: 'Start opening' }], state: { ui_state: '', client_events: [], workout: JSON.stringify(session) } }, '').reply;
+  assert.match(reply, /^Opening warm-up is under way in the simulation\./);
+  assert.match(reply, /timer_opening = Timer\("Opening warm-up", 120\)/);
 });
 
 test('duration parser takes whole tokens and never turns a negative into a budget', () => {

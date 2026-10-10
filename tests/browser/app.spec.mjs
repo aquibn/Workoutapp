@@ -2,6 +2,8 @@ import { test,expect } from '@playwright/test';
 import {mkdir} from 'node:fs/promises';
 const shots='evidence/screenshots';
 const wiringShots='test-results/wiring';
+// Committed screenshots change only when asked: CAPTURE_EVIDENCE=1 npm run test:ui
+const evidence=async(page,name,options={})=>{if(process.env.CAPTURE_EVIDENCE)await page.screenshot({path:`${shots}/${name}.png`,...options});};
 async function send(page,text){await page.locator('#message').fill(text);await page.locator('#send').click();await expect(page.locator('#pending')).toBeHidden();}
 async function tap(page,locator){await locator.click();await expect(page.locator('#pending')).toBeHidden();}
 async function demo(page){await page.locator('.builder').evaluate(e=>e.open=true);await page.locator('#sample').click();await expect(page.locator('[data-statement="count1"]')).toContainText('8');}
@@ -34,7 +36,7 @@ test('configured CLI needs explicit consent and records fake provider identity',
  await page.route('**/api/config',async route=>{const response=await route.fetch();const cfg=await response.json();cfg.providers.find(p=>p.id==='claude-cli').enabled=true;await route.fulfill({json:cfg});});await page.reload();await page.locator('#provider').selectOption('claude-cli');await expect(page.locator('#send')).toBeDisabled();await page.locator('#consent').check();await page.route('**/api/turn',route=>route.fulfill({json:{turn:{reply:'Transport fixture, not a live CLI request.'},versions:{provider:'claude-cli',mode:'live',model:'fixture-only'}}}));await send(page,'hello');await expect(page.locator('#spoken')).toContainText('Transport fixture');
 });
 test('full 90-second workout flow: preview, adaptations and simulation to recap', async ({ page }) => {
- await page.locator('#btn-start-demo').click();
+ await page.locator('#screen').getByRole('button', { name: 'Start demo session', exact: true }).click();
  await expect(page.locator('#screen')).toContainText('Session preview');
  await tap(page, page.locator('#screen').getByRole('button', { name: 'Start opening', exact: true }));
  await expect(page.locator('#screen')).toContainText('Opening warm-up');
@@ -50,7 +52,7 @@ test('full 90-second workout flow: preview, adaptations and simulation to recap'
  await expect(page.locator('#screen')).toContainText('7:00');
  await expect(page.locator('#screen')).toContainText('fast-forwarded');
  await expect(page.locator('#pending')).toBeHidden();
- await mkdir(shots,{recursive:true});await page.screenshot({path:shots+'/04-recap.png',fullPage:true});
+ await evidence(page,'04-recap',{fullPage:true});
  await expect(page.locator('#screen')).toContainText('8 intervals completed');
  await expect(page.locator('#screen')).toContainText('10 intervals removed');
  const state = JSON.parse(await page.locator('#state-json').textContent());
@@ -61,13 +63,13 @@ test('full 90-second workout flow: preview, adaptations and simulation to recap'
 });
 test('on-screen buttons alone move from a work slot through recovery to the next check-in', async ({ page }) => {
  const button = name => page.locator('#screen').getByRole('button', { name, exact: true });
- const finish = () => tap(page, button('Simulate interval finish'));
- await tap(page, page.locator('#btn-start-demo'));
+ const finish = () => tap(page, button('Simulate finish'));
+ await tap(page, page.locator('#screen').getByRole('button', { name: 'Start demo session', exact: true }));
  await tap(page, button('Start opening'));
  await finish();
  await tap(page, button('Continue next slot'));
  await expect(page.locator('#screen')).toContainText('Slot 1: Tempo squat');
- await mkdir(shots,{recursive:true});await page.screenshot({path:shots+'/02-active-slot.png',fullPage:true});
+ await evidence(page,'02-active-slot',{fullPage:true});
  await finish();
  await expect(page.locator('#screen')).toContainText('Slot 1: Recovery');
  const state = JSON.parse(await page.locator('#state-json').textContent());
@@ -78,10 +80,10 @@ test('on-screen buttons alone move from a work slot through recovery to the next
  await expect(page.locator('#screen')).toContainText('Slot 2: Standing reach');
  await tap(page, button('Make it easier'));
  await expect(page.locator('#screen')).toContainText('(25s)');
- await page.screenshot({path:shots+'/03-checkin-eased.png',fullPage:true});
+ await evidence(page,'03-checkin-eased',{fullPage:true});
 });
 test('a typed request is adapted through the coach Proposal, not a local shortcut', async ({ page }) => {
- await page.locator('#btn-start-demo').click();
+ await page.locator('#screen').getByRole('button', { name: 'Start demo session', exact: true }).click();
  await send(page, 'Can you shorten it?');
  await expect(page.locator('#transcript')).toContainText('How many minutes');
  let state = JSON.parse(await page.locator('#state-json').textContent());
@@ -94,16 +96,16 @@ test('a typed request is adapted through the coach Proposal, not a local shortcu
 });
 test('workout preview and active slot fit a phone screen', async ({ page }) => {
  await page.setViewportSize({ width: 390, height: 844 });
- await tap(page, page.locator('#btn-start-demo'));
+ await tap(page, page.locator('#screen').getByRole('button', { name: 'Start demo session', exact: true }));
  await expect(page.locator('#screen')).toContainText('Session preview');
- await mkdir(shots,{recursive:true});await page.screenshot({path:shots+'/01-preview.png',fullPage:false});
+ await evidence(page,'01-preview',{fullPage:false});
  await tap(page, page.locator('#screen').getByRole('button', { name: 'Start opening', exact: true }));
  await expect(page.locator('#screen')).toContainText('Warm-up');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
- await page.screenshot({path:shots+'/05-mobile-active.png',fullPage:true});
+ await evidence(page,'05-mobile-active',{fullPage:true});
 });
 test('remaining planned time counts down with the running interval timer', async ({ page }) => {
- await tap(page, page.locator('#btn-start-demo'));
+ await tap(page, page.locator('#screen').getByRole('button', { name: 'Start demo session', exact: true }));
  await tap(page, page.locator('#screen').getByRole('button', { name: 'Start opening', exact: true }));
  const remaining = page.locator('[data-statement="remainingStat"] strong');
  await expect(remaining).toHaveText('12:00');
@@ -114,9 +116,9 @@ test('remaining planned time counts down with the running interval timer', async
 });
 test('typed text never runs a session command, even when it names one', async ({ page }) => {
  const button = name => page.locator('#screen').getByRole('button', { name, exact: true });
- await tap(page, page.locator('#btn-start-demo'));
+ await tap(page, page.locator('#screen').getByRole('button', { name: 'Start demo session', exact: true }));
  await tap(page, button('Start opening'));
- await tap(page, button('Simulate interval finish'));
+ await tap(page, button('Simulate finish'));
  await send(page, 'do not end session yet');
  const state = JSON.parse(await page.locator('#state-json').textContent());
  expect(state.workout.stage).toBe('checkin');
@@ -125,17 +127,17 @@ test('typed text never runs a session command, even when it names one', async ({
 test('workout buttons work without an available provider and send nothing', async ({ page }) => {
  let turns = 0; page.on('request', r => { if (r.url().includes('/api/turn')) turns++; });
  await page.locator('#provider').selectOption('claude-cli');
- await page.locator('#btn-start-demo').click();
+ await page.locator('#screen').getByRole('button', { name: 'Start demo session', exact: true }).click();
  const button = name => page.locator('#screen').getByRole('button', { name, exact: true });
  await button('Start opening').click();
- await button('Simulate interval finish').click();
+ await button('Simulate finish').click();
  await button('End session').click();
  await expect(page.locator('#screen')).toContainText('Session ended early');
  await expect(page.locator('#error')).toBeHidden();
  expect(turns).toBe(0);
 });
 test('a proposal from before the session moved on is not applied', async ({ page }) => {
- await tap(page, page.locator('#btn-start-demo'));
+ await tap(page, page.locator('#screen').getByRole('button', { name: 'Start demo session', exact: true }));
  await tap(page, page.locator('#screen').getByRole('button', { name: 'Start opening', exact: true }));
  await page.locator('.builder').evaluate(e => e.open = true);
  await page.locator('#fault').selectOption('slow');
@@ -150,7 +152,7 @@ test('a proposal from before the session moved on is not applied', async ({ page
  expect(state.workout.adaptationHistory).toHaveLength(0);
 });
 test('builder patches cannot overwrite the workout screen', async ({ page }) => {
- await tap(page, page.locator('#btn-start-demo'));
+ await tap(page, page.locator('#screen').getByRole('button', { name: 'Start demo session', exact: true }));
  await page.locator('.builder').evaluate(e => e.open = true);
  await page.locator('#patch').fill('remainingStat = Keyword("99:00", "Remaining planned time")');
  await page.locator('#apply-patch').click();
@@ -159,9 +161,9 @@ test('builder patches cannot overwrite the workout screen', async ({ page }) => 
 });
 test('action history records automatic recovery starts and how each interval ended', async ({ page }) => {
  const button = name => page.locator('#screen').getByRole('button', { name, exact: true });
- await tap(page, page.locator('#btn-start-demo'));
+ await tap(page, page.locator('#screen').getByRole('button', { name: 'Start demo session', exact: true }));
  await tap(page, button('Start opening'));
- await tap(page, button('Simulate interval finish'));
+ await tap(page, button('Simulate finish'));
  await tap(page, button('Continue next slot'));
  await page.getByRole('button', { name: 'Simulate finish', exact: true }).click();
  await expect(page.locator('#screen')).toContainText('Slot 1: Recovery');
@@ -177,4 +179,64 @@ test('a wiring-only export carries no workout data', async ({ page }) => {
  const json = JSON.parse(content);
  expect(json.workout).toBeUndefined();
  expect(json.recap).toBeUndefined();
+});
+test('pressing an option while the coach is replying does not cancel the typed question', async ({ page }) => {
+ let turns = 0; page.on('request', r => { if (r.url().includes('/api/turn')) turns++; });
+ const button = name => page.locator('#screen').getByRole('button', { name, exact: true });
+ await tap(page, button('Start demo session'));
+ await tap(page, button('Start opening'));
+ await tap(page, button('Simulate finish'));
+ const before = turns;
+ await page.locator('.builder').evaluate(e => e.open = true);
+ await page.locator('#fault').selectOption('slow');
+ await page.locator('#message').fill('please make it gentler');
+ await page.locator('#send').click();
+ await expect(page.locator('#pending')).toBeVisible();
+ await button('Continue next slot').click();
+ await expect(page.locator('#screen')).toContainText('Main slot 1 of 8 · Work');
+ await expect(page.locator('#pending')).toBeHidden({ timeout: 10000 });
+ await expect(page.locator('#transcript')).not.toContainText('Previous reply interrupted');
+ await expect(page.locator('#transcript')).toContainText('Coach proposal not applied');
+ expect(turns - before).toBe(1);
+});
+test('preview steps are numbered and recap items keep their markers', async ({ page }) => {
+ const button = name => page.locator('#screen').getByRole('button', { name, exact: true });
+ await tap(page, button('Start demo session'));
+ await expect(page.locator('#screen ol li')).toHaveCount(3);
+ await tap(page, button('Start opening'));
+ await tap(page, button('End session'));
+ await expect(page.locator('#screen li[data-marker="plus"]')).toHaveCount(1);
+ await expect(page.locator('#screen li[data-marker="minus"]')).toHaveCount(1);
+});
+test('the transcript logs a finished interval before the recovery it starts', async ({ page }) => {
+ const button = name => page.locator('#screen').getByRole('button', { name, exact: true });
+ await tap(page, button('Start demo session'));
+ await tap(page, button('Start opening'));
+ await tap(page, button('Simulate finish'));
+ await tap(page, button('Continue next slot'));
+ await tap(page, button('Simulate finish'));
+ const events = await page.locator('#transcript .event').allTextContents();
+ const finished = events.indexOf('The timer for Slot 1: Tempo squat finished.');
+ const started = events.findIndex(e => e.startsWith('Started a timer for Slot 1: Recovery'));
+ expect(finished).toBeGreaterThan(-1);
+ expect(started).toBeGreaterThan(finished);
+});
+test('a newer option press replaces a stale comment on an older one', async ({ page }) => {
+ const sent = [];
+ await page.route('**/api/turn', async route => {
+  const text = JSON.parse(route.request().postData()).messages.at(-1).content;
+  sent.push(text);
+  if (text === 'Start opening') await new Promise(r => setTimeout(r, 2500));
+  try { await route.continue(); } catch {}
+ });
+ const button = name => page.locator('#screen').getByRole('button', { name, exact: true });
+ await tap(page, button('Start demo session'));
+ await button('Start opening').click();
+ await expect(page.locator('#pending')).toBeVisible();
+ await button('Simulate finish').click();
+ await button('Continue next slot').click();
+ await expect(page.locator('#pending')).toBeHidden({ timeout: 10000 });
+ expect(sent).toContain('Continue next slot');
+ await expect(page.locator('#transcript')).not.toContainText('Opening warm-up is under way');
+ await expect(page.locator('#transcript')).toContainText('Slot 1: Tempo squat is under way');
 });

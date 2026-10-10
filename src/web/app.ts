@@ -7,7 +7,7 @@ import { splitReply } from '../shared/openui/document.js';
 import type { StatementNode } from '../shared/openui/openui-model.js';
 import { redactValue } from '../shared/redact.js';
 import { renderComponent } from './components.js';
-import { byId,el } from './dom.js';
+import { byId,button,el } from './dom.js';
 import { applyAdaptation, calculateRemainingSeconds, completeActiveInterval, createWorkoutSession, endSession, getRecapSummary, startInterval, startSession } from '../shared/workout/session.js';
 import { extractProposal, formatClock, intervalTimerKey, renderWorkoutProgram } from '../shared/workout/openui-bridge.js';
 import type { WorkoutActionRecord, WorkoutSession } from '../shared/workout/types.js';
@@ -42,19 +42,19 @@ function render(){
   if(config){const selected=config.providers.find(p=>p.id===c.provider)!;byId('mode').textContent=c.provider==='mock'?'MOCK · NO MODEL CALLS':selected.enabled?'LIVE WHEN SENT':'SETUP / BLOCKED';byId('provider-description').textContent=selected.message;byId('consent-wrap').hidden=c.provider==='mock'||!selected.enabled;byId('consent-label').textContent=c.provider==='claude-cli'?'Use my subscription quota on Send/Retry; I reviewed the host-policy limits.':'Use my API budget on Send/Retry.';byId<HTMLInputElement>('consent').checked=c.consent;byId<HTMLButtonElement>('send').disabled=!selected.enabled||(c.provider!=='mock'&&!c.consent)||paused;byId('mock-controls').hidden=c.provider!=='mock';byId('sample').hidden=c.provider!=='mock';}
   byId('send').textContent=c.pending?'Send update ↗':'Send ↗';byId<HTMLButtonElement>('cancel').disabled=!c.pending;byId('pending').hidden=!c.pending;byId('status').textContent=c.pending?'Thinking… type an update to interrupt':c.error?'Needs attention':'Ready when you are';byId('error').hidden=!c.error;byId('error-message').textContent=c.error;
   const transcript=byId('transcript');transcript.replaceChildren();if(!c.events.length)transcript.append(el('p','Start the demo session, then tell the coach how it is going.','micro'));
-  for(const event of c.events){if(event.kind==='input'||event.kind==='response'){const n=el('div','','message '+(event.kind==='input'?'user':'assistant'));n.append(el('span',event.kind==='input'?'You':'Reply','who'),el('p',event.text??splitReply(event.result!.turn.reply).prose??''));transcript.append(n);}else if(event.text)transcript.append(el('p',event.text,'event'));else if(event.kind==='interrupted'||event.kind==='cancelled')transcript.append(el('p',event.kind==='interrupted'?'Previous reply interrupted. Your messages are kept.':'Reply cancelled.','event'));}
+  for(const event of c.events){if(event.kind==='input'||event.kind==='response'){const n=el('div','','message '+(event.kind==='input'?'user':'assistant'));n.append(el('span',event.kind==='input'?'You':'Coach','who'),el('p',event.text??splitReply(event.result!.turn.reply).prose??''));transcript.append(n);}else if(event.text)transcript.append(el('p',event.text,'event'));else if(event.kind==='interrupted'||event.kind==='cancelled')transcript.append(el('p',event.kind==='interrupted'?'Previous reply interrupted. Your messages are kept.':'Reply cancelled.','event'));}
   transcript.scrollTop=transcript.scrollHeight;syncTimers();
   const screens=c.document.screens,index=screens.findIndex(s=>s.key===c.document.cursor),key=c.document.echo()+String(paused);
   if(key!==renderKey || !byId('screen').childNodes.length){renderKey=key;updates=[];const surface=byId('screen');surface.replaceChildren();const current=c.document.current;
-    if(!current){const n=el('div','','empty');n.append(el('p','AiRA · FIND YOUR PACE','eyebrow'),el('h3','Your workout starts here.'),el('p','Click Start demo session to begin.'));surface.append(n);}
+    if(!current){const n=el('div','','empty');n.append(el('p','AiRA · FIND YOUR PACE','eyebrow'),el('h3','Your workout starts here.'),el('p','A simulated 12-minute session that adapts when your needs change.'),button('Start demo session',()=>pressOption('Start demo session'),'primary'));surface.append(n);}
     else{for(const node of current.props.children as StatementNode[])if(node.name!=='Cue')surface.append(renderComponent(node,{send:pressOption,timers,timerAction,updates,paused}));if(workoutActive)watchRemaining(surface);}
     const progress=byId('progress');progress.replaceChildren();if(screens.length>1)for(let i=0;i<screens.length;i++){const n=el('span','',''+(i===index?'active':i<index?'past':''));n.setAttribute('aria-label',`Screen ${i+1}${i===index?', current':''}`);progress.append(n);}
   }
   byId('navigation').hidden=screens.length<2;byId('position').textContent=`${index+1} / ${screens.length}`;byId<HTMLButtonElement>('back').disabled=paused||index<=0;byId<HTMLButtonElement>('next').disabled=paused;byId('next').textContent=index===screens.length-1?'Finish preview':'Next →';
-  byId<HTMLButtonElement>('pause').disabled=!screens.length;byId('pause').textContent=paused?'Resume preview':'Pause preview';byId('paused').hidden=!paused;
-  const cues=(c.document.current?.props.children as StatementNode[]??[]).filter(n=>n.name==='Cue').map(n=>String(n.props.text));byId('spoken').textContent=cues.join(' ')||c.document.prose||'Current-screen Cues appear here as text. No audio is produced.';
+  byId<HTMLButtonElement>('pause').disabled=!screens.length;byId('pause').textContent=paused?'Resume':'Pause';byId('paused').hidden=!paused;
+  const cues=(c.document.current?.props.children as StatementNode[]??[]).filter(n=>n.name==='Cue').map(n=>String(n.props.text));byId('spoken').textContent=cues.join(' ')||c.document.prose||'The coach\'s cues for the current screen appear here.';
   byId('state-json').textContent=JSON.stringify({ui_state:c.document.echo(),client_events:c.clientEvents,timers:timers.list(),workout},null,2);byId<HTMLButtonElement>('export').disabled=c.pending||!c.events.length;
-  const inSession=workoutActive&&!['welcome','recap'].includes(workout.stage);byId('btn-start-demo').hidden=workoutActive;byId('btn-sim-remaining').hidden=!inSession;byId<HTMLButtonElement>('btn-sim-remaining').disabled=paused||c.pending;byId('workout-actions').hidden=workoutActive&&!inSession;
+  const inSession=workoutActive&&!['welcome','recap'].includes(workout.stage);byId('btn-sim-remaining').hidden=!inSession;byId<HTMLButtonElement>('btn-sim-remaining').disabled=paused||c.pending;byId('workout-actions').hidden=!inSession;
 }
 byId<HTMLFormElement>('composer').addEventListener('submit',event=>{event.preventDefault();const text=draft.value.trim();if(text){draft.value='';send(text,true);}});
 draft.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();byId<HTMLFormElement>('composer').requestSubmit();}});
@@ -66,7 +66,6 @@ byId<HTMLSelectElement>('provider').addEventListener('change',event=>c.selectPro
 byId<HTMLInputElement>('consent').addEventListener('change',event=>{c.consent=(event.target as HTMLInputElement).checked;if(!c.consent)c.cancel();render();});
 byId('apply-patch').addEventListener('click',()=>{if(workoutActive){byId('patch-status').textContent='Patches are for the wiring sample. The workout screen is rendered from session state; load the sample first.';return;}try{const raw=byId<HTMLTextAreaElement>('patch').value;c.document.apply(raw.includes('```')?raw:'```openui\n'+raw+'\n```');c.localEvent('Builder applied local OpenUI data: '+raw);byId('patch-status').textContent='Patch accepted. This is local fixture evidence, not a model run.';}catch{byId('patch-status').textContent='Invalid patch. Previous screen kept. Check names, arguments and catalog.';}});
 byId('export').addEventListener('click',()=>{const label=byId<HTMLSelectElement>('run-label').value;const payload={format:'aira-workout-run-v1',label,appVersion:APP_VERSION,schemaVersion:SCHEMA_VERSION,selectedProvider:c.provider,note:byId<HTMLTextAreaElement>('note').value,events:c.events,state:{ui_state:c.document.echo(),client_events:c.clientEvents},timers:timers.list(),...(workoutActive?{workout,recap:getRecapSummary(workout)}:{})};const url=URL.createObjectURL(new Blob([JSON.stringify(redactValue(payload),null,2)],{type:'application/json'}));const link=el('a');link.href=url;link.download=label+'.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);byId('export-status').textContent=`Downloaded ${label}.json. Review and move it into runs/.`;});
-byId('btn-start-demo').addEventListener('click',()=>pressOption('Start demo session'));
 byId('btn-sim-remaining').addEventListener('click',()=>{if(!paused&&!c.pending)dispatch('skip-ahead');});
 async function start(){render();try{const response=await fetch('/api/config');if(!response.ok)throw new Error();config=await response.json();const select=byId<HTMLSelectElement>('provider');select.replaceChildren();for(const p of config!.providers){const option=el('option',p.label+(p.enabled?'':' · setup / blocked'));option.value=p.id;select.append(option);}select.value='mock';select.disabled=false;render();}catch{byId('status').textContent='Could not connect. Restart the local server and reload.';}}
 
@@ -95,13 +94,14 @@ function record(action: WorkoutActionRecord['action'], source: WorkoutActionReco
 function showWorkout(event?: string) {
   c.document.apply('```openui\n' + renderWorkoutProgram(workout, activeRemaining()) + '\n```');
   syncTimers();
-  // A newly active interval arrives with a stopped timer; start it.
+  if (event) c.localEvent(event, false);
+  // A newly active interval arrives with a stopped timer; start it after logging what caused it.
   const active = workout.intervals.find(i => i.id === workout.activeIntervalId);
   if (active && timers.list().find(t => t.id === intervalTimerKey(active.id))?.status === 'stopped') {
     timers.start(intervalTimerKey(active.id));
     c.localEvent(activityClientEvents.startedTimer(active.label, active.durationSeconds), false);
   }
-  if (event) c.localEvent(event, false); else render();
+  render();
 }
 
 function dispatch(action: WorkoutAction, arg?: string | number, source: WorkoutActionRecord['source'] = 'user') {
@@ -134,7 +134,8 @@ function dispatch(action: WorkoutAction, arg?: string | number, source: WorkoutA
       return showWorkout('Ended session early.');
     case 'restart':
       nav.dispose(); nav = makeNav(); paused = false; pausedTimers = []; timers.forget(); previousTimers.clear();
-      workout = createWorkoutSession();
+      // Restart goes straight to a fresh preview; the empty-canvas card is the only welcome.
+      workout = startSession(createWorkoutSession());
       record(action, source);
       return showWorkout('Restarted demo session.');
     case 'ease':
@@ -169,7 +170,6 @@ function dispatch(action: WorkoutAction, arg?: string | number, source: WorkoutA
 const OPTIONS: Record<string, [WorkoutAction, (string | number)?]> = {
   'Start demo session': ['start-session'],
   'Start opening': ['start-interval', 'opening'],
-  'Simulate interval finish': ['complete-interval'],
   'Continue next slot': ['start-interval'],
   'Make it easier': ['ease'],
   'I have 5 minutes left': ['shorten', 300],
@@ -180,11 +180,12 @@ const OPTIONS: Record<string, [WorkoutAction, (string | number)?]> = {
 function pressOption(label: string) {
   const option = OPTIONS[label];
   if (!option) return send(label);
-  if (paused) { c.error = 'Resume the preview first.'; return render(); }
+  if (paused) { c.error = 'Resume first.'; return render(); }
   dispatch(...option);
-  // Let the coach comment on the change when a provider is ready; the change itself never waits for it.
+  // Let the coach comment when a provider is ready. A newer press may replace a pending
+  // comment on an older one, but never a pending answer to something the user typed.
   const provider = config?.providers.find(p => p.id === c.provider);
-  if (provider?.enabled && (c.provider === 'mock' || c.consent)) { lastSendTyped = false; void c.send(label); }
+  if (provider?.enabled && (c.provider === 'mock' || c.consent) && !(c.pending && lastSendTyped)) { lastSendTyped = false; void c.send(label); }
 }
 
 function recordAutoStart(finishedId: string) {
