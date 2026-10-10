@@ -20,4 +20,4 @@ The in-app response runtime is disabled because its required restriction profile
 
 ## Verification status
 
-The adapter tests use fake transports. ClaudeCLI was checked live once, in a single recorded 8-turn session (Claude Code 2.1.278; the CLI reported `claude-sonnet-5`); the export is `runs/claude-cli-live.json`. That is one session, not a broad evaluation of model behaviour. No live OpenAI request has been made, and CodexCLI stays disabled. Cancelling locally may not prevent usage for a request already accepted by a provider.
+The adapter tests use fake transports. ClaudeCLI was checked live on 11 October 2026 in one recorded 12-turn session against this version (Claude Code 2.1.278; the CLI reported `claude-sonnet-5`), covering effort suggestions, typed adaptations and the safety boundary; the export is `runs/claude-cli-live.json`. That is one session, not a broad evaluation of model behaviour. No live OpenAI request has been made, and CodexCLI stays disabled. Cancelling locally may not prevent usage for a request already accepted by a provider.

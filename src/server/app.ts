@@ -80,6 +80,7 @@ export function createApp(config: Config, transport: typeof fetch = fetch, cliTr
             turn = result.turn; versions.returnedModel = result.returnedModel;
           }
           if (!isTurn(turn)) throw new PublicError('SCHEMA', 'The response did not match the component schema. Retry this turn.');
+          turn = { ...turn, reply: decodeDoubleEscapedReply(turn.reply) };
           const safe = redactValue({ turn, versions }) as Result;
           const preview = new ScreenDocument();
           try { if (input.state.ui_state) preview.apply('```openui\n' + input.state.ui_state + '\n```'); preview.apply(safe.turn.reply); }
@@ -109,4 +110,18 @@ export function createApp(config: Config, transport: typeof fetch = fetch, cliTr
   server.requestTimeout = 10_000;
   server.headersTimeout = 10_000;
   return server;
+}
+
+// Seen in a live Claude run: the model sometimes JSON-escapes its reply a second time, so line
+// breaks arrive as the characters "\n" and quotes as "\"", and the openui fence is no longer a
+// fence. Repair only that case (no real line breaks, an escaped fence) by decoding the reply as
+// the JSON string it was meant to be; validation still judges the result.
+export function decodeDoubleEscapedReply(reply: string): string {
+  if (reply.includes('\n') || !/```openui\\n/.test(reply)) return reply;
+  try {
+    const decoded: unknown = JSON.parse(`"${reply}"`);
+    return typeof decoded === 'string' ? decoded : reply;
+  } catch {
+    return reply;
+  }
 }

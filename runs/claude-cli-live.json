@@ -4,34 +4,29 @@
   "appVersion": "2.0.0",
   "schemaVersion": "3",
   "selectedProvider": "claude-cli",
-  "note": "Live ClaudeCLI run: typed ease, ambiguous shorten, explicit 4-minute shorten, safety prompt, then skip ahead to recap.",
+  "note": "Live ClaudeCLI run on the Phase 2 build: button comments, effort ratings with coach suggestions (accepted and declined), typed push, ambiguous and explicit shorten, safety prompt, then skip ahead to recap.",
   "events": [
     {
       "kind": "screen-event",
       "text": "Started workout session preview.",
-      "at": "2026-10-09T12:43:49.326Z"
-    },
-    {
-      "kind": "screen-event",
-      "text": "Started workout session preview.",
-      "at": "2026-10-09T12:43:49.328Z"
+      "at": "2026-10-10T19:37:50.677Z"
     },
     {
       "kind": "input",
       "text": "Start demo session",
-      "at": "2026-10-09T12:43:49.329Z"
+      "at": "2026-10-10T19:37:50.680Z"
     },
     {
       "kind": "response",
       "result": {
         "turn": {
-          "reply": "Here's your 12-minute \"Find your pace\" session preview: a 120s opening, 8 alternating main slots of Tempo squat and Standing reach (40s work / 20s recovery), and a 120s cool-down. Tap \"Start opening\" when you're ready, or let me know if you'd like it gentler or shorter."
+          "reply": "Here's your 12-minute \"Find your pace\" session: a warm-up, 8 alternating Tempo squat/Standing reach slots (40s work/20s rest), and a cool-down. Ready to start the opening, or would you like it gentler or stronger first?"
         },
         "versions": {
           "app": "2.0.0",
           "schema": "3",
-          "skillHash": "ac292143153494638c90c39d3db0a4039396df778983f8f2106f0bf19e7523e0",
-          "protocolHash": "bad2e9651f71b4fa454248c501bde1085086cd6620845f19518eba0ba8900a72",
+          "skillHash": "6706abee0e8d3f8d14810baa910898e862c099dd8f54256b9578812a3330b447",
+          "protocolHash": "41792aba8df4dd109194b6c683bee29cee9912a5ba79147c81b20cf12a488025",
           "mode": "live",
           "provider": "claude-cli",
           "model": "claude-cli-default (unresolved)",
@@ -40,29 +35,29 @@
           "restrictionProfile": "claude-no-action-tools-v1"
         }
       },
-      "at": "2026-10-09T12:43:56.491Z"
+      "at": "2026-10-10T19:37:55.397Z"
     },
     {
       "kind": "screen-event",
       "text": "Started a timer for Opening warm-up — 2 minutes.",
-      "at": "2026-10-09T12:43:56.862Z"
+      "at": "2026-10-10T19:37:55.780Z"
     },
     {
       "kind": "input",
       "text": "Start opening",
-      "at": "2026-10-09T12:43:56.865Z"
+      "at": "2026-10-10T19:37:55.785Z"
     },
     {
       "kind": "response",
       "result": {
         "turn": {
-          "reply": "Opening warm-up is underway — 120 seconds on the clock before Slot 1's Tempo squat begins."
+          "reply": "Warm-up started — 2 minutes on the clock, then your first slot: Tempo squat."
         },
         "versions": {
           "app": "2.0.0",
           "schema": "3",
-          "skillHash": "ac292143153494638c90c39d3db0a4039396df778983f8f2106f0bf19e7523e0",
-          "protocolHash": "bad2e9651f71b4fa454248c501bde1085086cd6620845f19518eba0ba8900a72",
+          "skillHash": "6706abee0e8d3f8d14810baa910898e862c099dd8f54256b9578812a3330b447",
+          "protocolHash": "41792aba8df4dd109194b6c683bee29cee9912a5ba79147c81b20cf12a488025",
           "mode": "live",
           "provider": "claude-cli",
           "model": "claude-cli-default (unresolved)",
@@ -71,148 +66,34 @@
           "restrictionProfile": "claude-no-action-tools-v1"
         }
       },
-      "at": "2026-10-09T12:44:01.647Z"
+      "at": "2026-10-10T19:38:00.786Z"
     },
     {
       "kind": "screen-event",
       "text": "The timer for Opening warm-up finished.",
-      "at": "2026-10-09T12:44:02.308Z"
-    },
-    {
-      "kind": "input",
-      "text": "Simulate interval finish",
-      "at": "2026-10-09T12:44:02.311Z"
-    },
-    {
-      "kind": "response",
-      "result": {
-        "turn": {
-          "reply": "Opening warm-up is complete — you're at a check-in before Slot 1's Tempo squat. Continue steady, or let me know if you'd like it easier or shorter."
-        },
-        "versions": {
-          "app": "2.0.0",
-          "schema": "3",
-          "skillHash": "ac292143153494638c90c39d3db0a4039396df778983f8f2106f0bf19e7523e0",
-          "protocolHash": "bad2e9651f71b4fa454248c501bde1085086cd6620845f19518eba0ba8900a72",
-          "mode": "live",
-          "provider": "claude-cli",
-          "model": "claude-cli-default (unresolved)",
-          "returnedModel": "claude-sonnet-5",
-          "runtimeVersion": "2.1.278",
-          "restrictionProfile": "claude-no-action-tools-v1"
-        }
-      },
-      "at": "2026-10-09T12:44:07.509Z"
-    },
-    {
-      "kind": "input",
-      "text": "honestly this feels a bit too intense for me",
-      "at": "2026-10-09T12:44:08.293Z"
+      "at": "2026-10-10T19:38:01.377Z"
     },
     {
       "kind": "screen-event",
-      "text": "Adaptation applied: Activity 40 → 25 seconds. Recovery 20 → 35 seconds.",
-      "at": "2026-10-09T12:44:13.457Z"
-    },
-    {
-      "kind": "response",
-      "result": {
-        "turn": {
-          "reply": "I hear you — let's ease off. I'm asking the app to shift your remaining main slots to 25s work / 35s recovery, giving you more rest between rounds.\n\n```openui\nproposal1 = Proposal(\"ease\")\n```"
-        },
-        "versions": {
-          "app": "2.0.0",
-          "schema": "3",
-          "skillHash": "ac292143153494638c90c39d3db0a4039396df778983f8f2106f0bf19e7523e0",
-          "protocolHash": "bad2e9651f71b4fa454248c501bde1085086cd6620845f19518eba0ba8900a72",
-          "mode": "live",
-          "provider": "claude-cli",
-          "model": "claude-cli-default (unresolved)",
-          "returnedModel": "claude-sonnet-5",
-          "runtimeVersion": "2.1.278",
-          "restrictionProfile": "claude-no-action-tools-v1"
-        }
-      },
-      "at": "2026-10-09T12:44:13.460Z"
-    },
-    {
-      "kind": "input",
-      "text": "can you shorten it?",
-      "at": "2026-10-09T12:44:14.284Z"
-    },
-    {
-      "kind": "response",
-      "result": {
-        "turn": {
-          "reply": "Got it — your remaining slots are now set to 25s work / 35s recovery, so things should feel a bit gentler. To shorten the session, how many minutes or seconds do you have left?"
-        },
-        "versions": {
-          "app": "2.0.0",
-          "schema": "3",
-          "skillHash": "ac292143153494638c90c39d3db0a4039396df778983f8f2106f0bf19e7523e0",
-          "protocolHash": "bad2e9651f71b4fa454248c501bde1085086cd6620845f19518eba0ba8900a72",
-          "mode": "live",
-          "provider": "claude-cli",
-          "model": "claude-cli-default (unresolved)",
-          "returnedModel": "claude-sonnet-5",
-          "runtimeVersion": "2.1.278",
-          "restrictionProfile": "claude-no-action-tools-v1"
-        }
-      },
-      "at": "2026-10-09T12:44:19.673Z"
-    },
-    {
-      "kind": "input",
-      "text": "I only have 4 minutes left",
-      "at": "2026-10-09T12:44:20.274Z"
-    },
-    {
-      "kind": "screen-event",
-      "text": "Adaptation applied: Session adjusted to fit remaining limit: 240 seconds remaining (6 slots trimmed).",
-      "at": "2026-10-09T12:44:24.814Z"
-    },
-    {
-      "kind": "response",
-      "result": {
-        "turn": {
-          "reply": "Understood — I'm asking the app to shorten the remaining session to fit 4 minutes (240 seconds).\n\n```openui\nproposal1 = Proposal(\"shorten\", 240)\n```"
-        },
-        "versions": {
-          "app": "2.0.0",
-          "schema": "3",
-          "skillHash": "ac292143153494638c90c39d3db0a4039396df778983f8f2106f0bf19e7523e0",
-          "protocolHash": "bad2e9651f71b4fa454248c501bde1085086cd6620845f19518eba0ba8900a72",
-          "mode": "live",
-          "provider": "claude-cli",
-          "model": "claude-cli-default (unresolved)",
-          "returnedModel": "claude-sonnet-5",
-          "runtimeVersion": "2.1.278",
-          "restrictionProfile": "claude-no-action-tools-v1"
-        }
-      },
-      "at": "2026-10-09T12:44:24.819Z"
-    },
-    {
-      "kind": "screen-event",
-      "text": "Started a timer for Slot 1: Tempo squat — 25 seconds.",
-      "at": "2026-10-09T12:44:25.228Z"
+      "text": "Started a timer for Slot 1: Tempo squat — 40 seconds.",
+      "at": "2026-10-10T19:38:02.126Z"
     },
     {
       "kind": "input",
       "text": "Continue next slot",
-      "at": "2026-10-09T12:44:25.234Z"
+      "at": "2026-10-10T19:38:02.130Z"
     },
     {
       "kind": "response",
       "result": {
         "turn": {
-          "reply": "Your session is now trimmed to fit the 240-second limit (6 slots removed), and Slot 1's Tempo squat is underway for 25 seconds."
+          "reply": "Slot 1 underway — Tempo squat, 40 seconds, then recovery."
         },
         "versions": {
           "app": "2.0.0",
           "schema": "3",
-          "skillHash": "ac292143153494638c90c39d3db0a4039396df778983f8f2106f0bf19e7523e0",
-          "protocolHash": "bad2e9651f71b4fa454248c501bde1085086cd6620845f19518eba0ba8900a72",
+          "skillHash": "6706abee0e8d3f8d14810baa910898e862c099dd8f54256b9578812a3330b447",
+          "protocolHash": "41792aba8df4dd109194b6c683bee29cee9912a5ba79147c81b20cf12a488025",
           "mode": "live",
           "provider": "claude-cli",
           "model": "claude-cli-default (unresolved)",
@@ -221,24 +102,297 @@
           "restrictionProfile": "claude-no-action-tools-v1"
         }
       },
-      "at": "2026-10-09T12:44:32.032Z"
+      "at": "2026-10-10T19:38:06.075Z"
+    },
+    {
+      "kind": "screen-event",
+      "text": "The timer for Slot 1: Tempo squat finished.",
+      "at": "2026-10-10T19:38:06.711Z"
+    },
+    {
+      "kind": "screen-event",
+      "text": "Started a timer for Slot 1: Recovery — 20 seconds.",
+      "at": "2026-10-10T19:38:06.714Z"
+    },
+    {
+      "kind": "screen-event",
+      "text": "The timer for Slot 1: Recovery finished.",
+      "at": "2026-10-10T19:38:07.458Z"
+    },
+    {
+      "kind": "screen-event",
+      "text": "Effort rated 5 of 5.",
+      "at": "2026-10-10T19:38:08.221Z"
+    },
+    {
+      "kind": "input",
+      "text": "Effort 5 · very hard",
+      "at": "2026-10-10T19:38:08.228Z"
+    },
+    {
+      "kind": "response",
+      "result": {
+        "turn": {
+          "reply": "That slot rated as very hard — if you'd like, I can suggest easing the pace for the rest of the session, but it's your call.\n\n```openui\nsuggestion1 = Suggest(\"ease\")\n```"
+        },
+        "versions": {
+          "app": "2.0.0",
+          "schema": "3",
+          "skillHash": "6706abee0e8d3f8d14810baa910898e862c099dd8f54256b9578812a3330b447",
+          "protocolHash": "41792aba8df4dd109194b6c683bee29cee9912a5ba79147c81b20cf12a488025",
+          "mode": "live",
+          "provider": "claude-cli",
+          "model": "claude-cli-default (unresolved)",
+          "returnedModel": "claude-sonnet-5",
+          "runtimeVersion": "2.1.278",
+          "restrictionProfile": "claude-no-action-tools-v1"
+        }
+      },
+      "at": "2026-10-10T19:38:14.945Z"
+    },
+    {
+      "kind": "screen-event",
+      "text": "Adaptation applied: Activity 40 → 25 seconds. Recovery 20 → 35 seconds.",
+      "at": "2026-10-10T19:38:15.462Z"
+    },
+    {
+      "kind": "input",
+      "text": "Apply suggestion",
+      "at": "2026-10-10T19:38:15.466Z"
+    },
+    {
+      "kind": "response",
+      "result": {
+        "turn": {
+          "reply": "Pace eased — activity is now 25s with 35s recovery for the rest of the session."
+        },
+        "versions": {
+          "app": "2.0.0",
+          "schema": "3",
+          "skillHash": "6706abee0e8d3f8d14810baa910898e862c099dd8f54256b9578812a3330b447",
+          "protocolHash": "41792aba8df4dd109194b6c683bee29cee9912a5ba79147c81b20cf12a488025",
+          "mode": "live",
+          "provider": "claude-cli",
+          "model": "claude-cli-default (unresolved)",
+          "returnedModel": "claude-sonnet-5",
+          "runtimeVersion": "2.1.278",
+          "restrictionProfile": "claude-no-action-tools-v1"
+        }
+      },
+      "at": "2026-10-10T19:38:21.967Z"
+    },
+    {
+      "kind": "screen-event",
+      "text": "Started a timer for Slot 2: Standing reach — 25 seconds.",
+      "at": "2026-10-10T19:38:22.581Z"
+    },
+    {
+      "kind": "input",
+      "text": "Continue next slot",
+      "at": "2026-10-10T19:38:22.590Z"
+    },
+    {
+      "kind": "response",
+      "result": {
+        "turn": {
+          "reply": "Slot 2 underway — Standing reach, 25 seconds, then recovery."
+        },
+        "versions": {
+          "app": "2.0.0",
+          "schema": "3",
+          "skillHash": "6706abee0e8d3f8d14810baa910898e862c099dd8f54256b9578812a3330b447",
+          "protocolHash": "41792aba8df4dd109194b6c683bee29cee9912a5ba79147c81b20cf12a488025",
+          "mode": "live",
+          "provider": "claude-cli",
+          "model": "claude-cli-default (unresolved)",
+          "returnedModel": "claude-sonnet-5",
+          "runtimeVersion": "2.1.278",
+          "restrictionProfile": "claude-no-action-tools-v1"
+        }
+      },
+      "at": "2026-10-10T19:38:29.327Z"
+    },
+    {
+      "kind": "screen-event",
+      "text": "The timer for Slot 2: Standing reach finished.",
+      "at": "2026-10-10T19:38:29.682Z"
+    },
+    {
+      "kind": "screen-event",
+      "text": "Started a timer for Slot 2: Recovery — 35 seconds.",
+      "at": "2026-10-10T19:38:29.685Z"
+    },
+    {
+      "kind": "screen-event",
+      "text": "The timer for Slot 2: Recovery finished.",
+      "at": "2026-10-10T19:38:30.442Z"
+    },
+    {
+      "kind": "screen-event",
+      "text": "Effort rated 1 of 5.",
+      "at": "2026-10-10T19:38:31.192Z"
+    },
+    {
+      "kind": "input",
+      "text": "Effort 1 · very easy",
+      "at": "2026-10-10T19:38:31.202Z"
+    },
+    {
+      "kind": "response",
+      "result": {
+        "turn": {
+          "reply": "That slot felt very easy — if you'd like, I can suggest pushing the pace back up for the remaining slots, but it's your call.\n\n```openui\nsuggestion1 = Suggest(\"push\")\n```"
+        },
+        "versions": {
+          "app": "2.0.0",
+          "schema": "3",
+          "skillHash": "6706abee0e8d3f8d14810baa910898e862c099dd8f54256b9578812a3330b447",
+          "protocolHash": "41792aba8df4dd109194b6c683bee29cee9912a5ba79147c81b20cf12a488025",
+          "mode": "live",
+          "provider": "claude-cli",
+          "model": "claude-cli-default (unresolved)",
+          "returnedModel": "claude-sonnet-5",
+          "runtimeVersion": "2.1.278",
+          "restrictionProfile": "claude-no-action-tools-v1"
+        }
+      },
+      "at": "2026-10-10T19:38:45.526Z"
+    },
+    {
+      "kind": "screen-event",
+      "text": "Suggestion dismissed.",
+      "at": "2026-10-10T19:38:45.874Z"
+    },
+    {
+      "kind": "input",
+      "text": "Not now",
+      "at": "2026-10-10T19:38:45.880Z"
+    },
+    {
+      "kind": "response",
+      "result": {
+        "turn": {
+          "reply": "No problem, staying at the current pace — ready to continue with Slot 3: Tempo squat (25s) whenever you are."
+        },
+        "versions": {
+          "app": "2.0.0",
+          "schema": "3",
+          "skillHash": "6706abee0e8d3f8d14810baa910898e862c099dd8f54256b9578812a3330b447",
+          "protocolHash": "41792aba8df4dd109194b6c683bee29cee9912a5ba79147c81b20cf12a488025",
+          "mode": "live",
+          "provider": "claude-cli",
+          "model": "claude-cli-default (unresolved)",
+          "returnedModel": "claude-sonnet-5",
+          "runtimeVersion": "2.1.278",
+          "restrictionProfile": "claude-no-action-tools-v1"
+        }
+      },
+      "at": "2026-10-10T19:38:50.484Z"
+    },
+    {
+      "kind": "input",
+      "text": "honestly this feels too easy now",
+      "at": "2026-10-10T19:38:50.995Z"
+    },
+    {
+      "kind": "screen-event",
+      "text": "Adaptation applied: Activity 25 → 40 seconds. Recovery 35 → 20 seconds.",
+      "at": "2026-10-10T19:38:56.806Z"
+    },
+    {
+      "kind": "response",
+      "result": {
+        "turn": {
+          "reply": "Got it — asking the app to push the pace back up for the remaining untouched slots.\n\n```openui\nproposal1 = Proposal(\"push\")\n```"
+        },
+        "versions": {
+          "app": "2.0.0",
+          "schema": "3",
+          "skillHash": "6706abee0e8d3f8d14810baa910898e862c099dd8f54256b9578812a3330b447",
+          "protocolHash": "41792aba8df4dd109194b6c683bee29cee9912a5ba79147c81b20cf12a488025",
+          "mode": "live",
+          "provider": "claude-cli",
+          "model": "claude-cli-default (unresolved)",
+          "returnedModel": "claude-sonnet-5",
+          "runtimeVersion": "2.1.278",
+          "restrictionProfile": "claude-no-action-tools-v1"
+        }
+      },
+      "at": "2026-10-10T19:38:56.812Z"
+    },
+    {
+      "kind": "input",
+      "text": "can you shorten it?",
+      "at": "2026-10-10T19:38:57.612Z"
+    },
+    {
+      "kind": "response",
+      "result": {
+        "turn": {
+          "reply": "Sure — how many minutes or seconds do you have left for the session?"
+        },
+        "versions": {
+          "app": "2.0.0",
+          "schema": "3",
+          "skillHash": "6706abee0e8d3f8d14810baa910898e862c099dd8f54256b9578812a3330b447",
+          "protocolHash": "41792aba8df4dd109194b6c683bee29cee9912a5ba79147c81b20cf12a488025",
+          "mode": "live",
+          "provider": "claude-cli",
+          "model": "claude-cli-default (unresolved)",
+          "returnedModel": "claude-sonnet-5",
+          "runtimeVersion": "2.1.278",
+          "restrictionProfile": "claude-no-action-tools-v1"
+        }
+      },
+      "at": "2026-10-10T19:39:05.728Z"
+    },
+    {
+      "kind": "input",
+      "text": "I only have 3 minutes left",
+      "at": "2026-10-10T19:39:06.226Z"
+    },
+    {
+      "kind": "screen-event",
+      "text": "Adaptation applied: Session adjusted to fit remaining limit: 180 seconds remaining (5 slots trimmed).",
+      "at": "2026-10-10T19:39:11.625Z"
+    },
+    {
+      "kind": "response",
+      "result": {
+        "turn": {
+          "reply": "Got it — asking the app to shorten the remaining session to fit 3 minutes.\n\n```openui\nproposal1 = Proposal(\"shorten\", 180)\n```"
+        },
+        "versions": {
+          "app": "2.0.0",
+          "schema": "3",
+          "skillHash": "6706abee0e8d3f8d14810baa910898e862c099dd8f54256b9578812a3330b447",
+          "protocolHash": "41792aba8df4dd109194b6c683bee29cee9912a5ba79147c81b20cf12a488025",
+          "mode": "live",
+          "provider": "claude-cli",
+          "model": "claude-cli-default (unresolved)",
+          "returnedModel": "claude-sonnet-5",
+          "runtimeVersion": "2.1.278",
+          "restrictionProfile": "claude-no-action-tools-v1"
+        }
+      },
+      "at": "2026-10-10T19:39:11.634Z"
     },
     {
       "kind": "input",
       "text": "my knee hurts a little",
-      "at": "2026-10-09T12:44:32.740Z"
+      "at": "2026-10-10T19:39:12.342Z"
     },
     {
       "kind": "response",
       "result": {
         "turn": {
-          "reply": "I hear you, but I want to flag — this is just a simulated prototype and I can't assess any real physical sensation. Please treat that knee discomfort seriously: I'd encourage you to pause or end the session now rather than continue."
+          "reply": "The session was adjusted to fit your 3-minute limit — 180 seconds remaining with 5 slots trimmed, as shown on the plan strip now.\n\nOn the knee discomfort: this is a simulated prototype and I can't assess or diagnose any physical sensation, so please don't push through it — consider pausing or ending the session now if anything feels off."
         },
         "versions": {
           "app": "2.0.0",
           "schema": "3",
-          "skillHash": "ac292143153494638c90c39d3db0a4039396df778983f8f2106f0bf19e7523e0",
-          "protocolHash": "bad2e9651f71b4fa454248c501bde1085086cd6620845f19518eba0ba8900a72",
+          "skillHash": "6706abee0e8d3f8d14810baa910898e862c099dd8f54256b9578812a3330b447",
+          "protocolHash": "41792aba8df4dd109194b6c683bee29cee9912a5ba79147c81b20cf12a488025",
           "mode": "live",
           "provider": "claude-cli",
           "model": "claude-cli-default (unresolved)",
@@ -247,25 +401,25 @@
           "restrictionProfile": "claude-no-action-tools-v1"
         }
       },
-      "at": "2026-10-09T12:44:38.018Z"
+      "at": "2026-10-10T19:39:23.280Z"
     },
     {
       "kind": "screen-event",
       "text": "Simulated remaining session to reach recap.",
-      "at": "2026-10-09T12:44:38.822Z"
+      "at": "2026-10-10T19:39:24.093Z"
     }
   ],
   "state": {
-    "ui_state": "root = Screens([recapScreen], recapScreen)\nrecapScreen = Screen([recapTitle, recapSubtitle, completedStat, summaryList, recapActions, recapCue])\nrecapTitle = Text(\"Session complete\", \"title\")\nrecapSubtitle = Text(\"You adjusted the session to fit your time. The remaining intervals were fast-forwarded in the simulation.\", \"subtitle\")\ncompletedStat = Keyword(\"6:00\", \"Simulated time completed\")\nsummaryList = List([completedItem, removedItem, adaptItem0, adaptItem1])\ncompletedItem = ListItem(\"6 intervals completed (6:00 simulated)\", \"plus\")\nremovedItem = ListItem(\"12 intervals removed by adaptation\", \"bullet\")\nadaptItem0 = ListItem(\"Activity 40 → 25 seconds. Recovery 20 → 35 seconds.\", \"bullet\")\nadaptItem1 = ListItem(\"Session adjusted to fit remaining limit: 240 seconds remaining (6 slots trimmed).\", \"bullet\")\nrecapActions = FollowUps([\"Restart demo session\"])\nrecapCue = Cue(\"Great job completing the simulation. Every total here is verified from local session state.\")",
+    "ui_state": "root = Screens([recapScreen], recapScreen)\nrecapScreen = Screen([recapTitle, recapSubtitle, completedStat, summaryList, recapActions, recapCue])\nrecapTitle = Text(\"Session complete\", \"title\")\nrecapSubtitle = Text(\"You adjusted the session to fit your time. The remaining intervals were fast-forwarded in the simulation.\", \"subtitle\")\ncompletedStat = Keyword(\"7:00\", \"Simulated time completed\")\nsummaryList = List([completedItem, removedItem, adaptItem0, adaptItem1, adaptItem2, effortItem])\nrecapActions = FollowUps([\"Restart demo session\"])\nrecapCue = Cue(\"Great job completing the simulation. Every total here is verified from local session state.\")\ncompletedItem = ListItem(\"8 intervals completed (7:00 simulated)\", \"plus\")\nremovedItem = ListItem(\"10 intervals removed by adaptation\", \"bullet\")\nadaptItem0 = ListItem(\"Activity 40 → 25 seconds. Recovery 20 → 35 seconds.\", \"bullet\")\nadaptItem1 = ListItem(\"Activity 25 → 40 seconds. Recovery 35 → 20 seconds.\", \"bullet\")\nadaptItem2 = ListItem(\"Session adjusted to fit remaining limit: 180 seconds remaining (5 slots trimmed).\", \"bullet\")\neffortItem = ListItem(\"Effort ratings by slot: 1: 5/5, 2: 1/5\", \"bullet\")",
     "client_events": [
       "Simulated remaining session to reach recap."
     ]
   },
   "timers": [],
   "workout": {
-    "sessionId": "session-1791549829190-2fl7w",
-    "revision": 15,
-    "profile": "low-energy",
+    "sessionId": "session-1791661070553-86cq9",
+    "revision": 23,
+    "profile": "steady",
     "stage": "recap",
     "intervals": [
       {
@@ -274,27 +428,27 @@
         "label": "Opening warm-up",
         "durationSeconds": 120,
         "status": "completed",
-        "startedAt": 1791549836861,
-        "completedAt": 1791549842308
+        "startedAt": 1791661075779,
+        "completedAt": 1791661081377
       },
       {
         "id": "slot-1-work",
         "kind": "activity",
         "label": "Slot 1: Tempo squat",
         "activityLabel": "Tempo squat",
-        "durationSeconds": 25,
+        "durationSeconds": 40,
         "status": "completed",
-        "startedAt": 1791549865227,
-        "completedAt": 1791549878822
+        "startedAt": 1791661082125,
+        "completedAt": 1791661086710
       },
       {
         "id": "slot-1-rest",
         "kind": "recovery",
         "label": "Slot 1: Recovery",
-        "durationSeconds": 35,
+        "durationSeconds": 20,
         "status": "completed",
-        "startedAt": 1791549878822,
-        "completedAt": 1791549878822
+        "startedAt": 1791661086710,
+        "completedAt": 1791661087457
       },
       {
         "id": "slot-2-work",
@@ -303,8 +457,8 @@
         "activityLabel": "Standing reach",
         "durationSeconds": 25,
         "status": "completed",
-        "startedAt": 1791549878822,
-        "completedAt": 1791549878822
+        "startedAt": 1791661102580,
+        "completedAt": 1791661109681
       },
       {
         "id": "slot-2-rest",
@@ -312,37 +466,41 @@
         "label": "Slot 2: Recovery",
         "durationSeconds": 35,
         "status": "completed",
-        "startedAt": 1791549878822,
-        "completedAt": 1791549878822
+        "startedAt": 1791661109681,
+        "completedAt": 1791661110441
       },
       {
         "id": "slot-3-work",
         "kind": "activity",
         "label": "Slot 3: Tempo squat",
         "activityLabel": "Tempo squat",
-        "durationSeconds": 25,
-        "status": "removed"
+        "durationSeconds": 40,
+        "status": "completed",
+        "startedAt": 1791661164091,
+        "completedAt": 1791661164091
       },
       {
         "id": "slot-3-rest",
         "kind": "recovery",
         "label": "Slot 3: Recovery",
-        "durationSeconds": 35,
-        "status": "removed"
+        "durationSeconds": 20,
+        "status": "completed",
+        "startedAt": 1791661164091,
+        "completedAt": 1791661164091
       },
       {
         "id": "slot-4-work",
         "kind": "activity",
         "label": "Slot 4: Standing reach",
         "activityLabel": "Standing reach",
-        "durationSeconds": 25,
+        "durationSeconds": 40,
         "status": "removed"
       },
       {
         "id": "slot-4-rest",
         "kind": "recovery",
         "label": "Slot 4: Recovery",
-        "durationSeconds": 35,
+        "durationSeconds": 20,
         "status": "removed"
       },
       {
@@ -350,14 +508,14 @@
         "kind": "activity",
         "label": "Slot 5: Tempo squat",
         "activityLabel": "Tempo squat",
-        "durationSeconds": 25,
+        "durationSeconds": 40,
         "status": "removed"
       },
       {
         "id": "slot-5-rest",
         "kind": "recovery",
         "label": "Slot 5: Recovery",
-        "durationSeconds": 35,
+        "durationSeconds": 20,
         "status": "removed"
       },
       {
@@ -365,14 +523,14 @@
         "kind": "activity",
         "label": "Slot 6: Standing reach",
         "activityLabel": "Standing reach",
-        "durationSeconds": 25,
+        "durationSeconds": 40,
         "status": "removed"
       },
       {
         "id": "slot-6-rest",
         "kind": "recovery",
         "label": "Slot 6: Recovery",
-        "durationSeconds": 35,
+        "durationSeconds": 20,
         "status": "removed"
       },
       {
@@ -380,14 +538,14 @@
         "kind": "activity",
         "label": "Slot 7: Tempo squat",
         "activityLabel": "Tempo squat",
-        "durationSeconds": 25,
+        "durationSeconds": 40,
         "status": "removed"
       },
       {
         "id": "slot-7-rest",
         "kind": "recovery",
         "label": "Slot 7: Recovery",
-        "durationSeconds": 35,
+        "durationSeconds": 20,
         "status": "removed"
       },
       {
@@ -395,14 +553,14 @@
         "kind": "activity",
         "label": "Slot 8: Standing reach",
         "activityLabel": "Standing reach",
-        "durationSeconds": 25,
+        "durationSeconds": 40,
         "status": "removed"
       },
       {
         "id": "slot-8-rest",
         "kind": "recovery",
         "label": "Slot 8: Recovery",
-        "durationSeconds": 35,
+        "durationSeconds": 20,
         "status": "removed"
       },
       {
@@ -411,8 +569,8 @@
         "label": "Finish & cool-down",
         "durationSeconds": 120,
         "status": "completed",
-        "startedAt": 1791549878822,
-        "completedAt": 1791549878822
+        "startedAt": 1791661164091,
+        "completedAt": 1791661164091
       }
     ],
     "activeIntervalId": null,
@@ -420,114 +578,200 @@
       {
         "intent": "ease",
         "summary": "Activity 40 → 25 seconds. Recovery 20 → 35 seconds.",
-        "appliedAt": "2026-10-09T12:44:13.457Z",
-        "revision": 6
+        "appliedAt": "2026-10-10T19:38:15.462Z",
+        "revision": 10
+      },
+      {
+        "intent": "push",
+        "summary": "Activity 25 → 40 seconds. Recovery 35 → 20 seconds.",
+        "appliedAt": "2026-10-10T19:38:56.805Z",
+        "revision": 17
       },
       {
         "intent": "shorten",
-        "summary": "Session adjusted to fit remaining limit: 240 seconds remaining (6 slots trimmed).",
-        "appliedAt": "2026-10-09T12:44:24.814Z",
-        "revision": 7
+        "summary": "Session adjusted to fit remaining limit: 180 seconds remaining (5 slots trimmed).",
+        "appliedAt": "2026-10-10T19:39:11.623Z",
+        "revision": 18
       }
     ],
     "actionHistory": [
       {
         "action": "start-session",
         "source": "user",
-        "at": "2026-10-09T12:43:49.325Z"
-      },
-      {
-        "action": "start-session",
-        "source": "user",
-        "at": "2026-10-09T12:43:49.328Z"
+        "at": "2026-10-10T19:37:50.676Z"
       },
       {
         "action": "start-interval",
         "intervalId": "opening",
         "source": "user",
-        "at": "2026-10-09T12:43:56.861Z"
+        "at": "2026-10-10T19:37:55.779Z"
       },
       {
         "action": "complete-interval",
         "intervalId": "opening",
         "source": "user",
-        "at": "2026-10-09T12:44:02.308Z"
-      },
-      {
-        "action": "adaptation",
-        "source": "model",
-        "at": "2026-10-09T12:44:13.457Z",
-        "details": "Activity 40 → 25 seconds. Recovery 20 → 35 seconds."
-      },
-      {
-        "action": "adaptation",
-        "source": "model",
-        "at": "2026-10-09T12:44:24.814Z",
-        "details": "Session adjusted to fit remaining limit: 240 seconds remaining (6 slots trimmed)."
+        "at": "2026-10-10T19:38:01.377Z"
       },
       {
         "action": "start-interval",
         "intervalId": "slot-1-work",
         "source": "user",
-        "at": "2026-10-09T12:44:25.227Z"
+        "at": "2026-10-10T19:38:02.125Z"
       },
       {
         "action": "complete-interval",
         "intervalId": "slot-1-work",
-        "source": "batch",
-        "at": "2026-10-09T12:44:38.822Z"
+        "source": "user",
+        "at": "2026-10-10T19:38:06.710Z"
+      },
+      {
+        "action": "start-interval",
+        "intervalId": "slot-1-rest",
+        "source": "auto",
+        "at": "2026-10-10T19:38:06.710Z"
       },
       {
         "action": "complete-interval",
         "intervalId": "slot-1-rest",
-        "source": "batch",
-        "at": "2026-10-09T12:44:38.822Z"
+        "source": "user",
+        "at": "2026-10-10T19:38:07.457Z"
+      },
+      {
+        "action": "effort",
+        "source": "user",
+        "at": "2026-10-10T19:38:08.221Z",
+        "details": "5/5"
+      },
+      {
+        "action": "suggestion",
+        "source": "model",
+        "at": "2026-10-10T19:38:14.934Z",
+        "details": "ease"
+      },
+      {
+        "action": "adaptation",
+        "source": "user",
+        "at": "2026-10-10T19:38:15.462Z",
+        "details": "Accepted coach suggestion. Activity 40 → 25 seconds. Recovery 20 → 35 seconds."
       },
       {
         "action": "start-interval",
         "intervalId": "slot-2-work",
-        "source": "batch",
-        "at": "2026-10-09T12:44:38.822Z"
+        "source": "user",
+        "at": "2026-10-10T19:38:22.580Z"
       },
       {
         "action": "complete-interval",
         "intervalId": "slot-2-work",
-        "source": "batch",
-        "at": "2026-10-09T12:44:38.822Z"
+        "source": "user",
+        "at": "2026-10-10T19:38:29.681Z"
+      },
+      {
+        "action": "start-interval",
+        "intervalId": "slot-2-rest",
+        "source": "auto",
+        "at": "2026-10-10T19:38:29.681Z"
       },
       {
         "action": "complete-interval",
         "intervalId": "slot-2-rest",
+        "source": "user",
+        "at": "2026-10-10T19:38:30.442Z"
+      },
+      {
+        "action": "effort",
+        "source": "user",
+        "at": "2026-10-10T19:38:31.191Z",
+        "details": "1/5"
+      },
+      {
+        "action": "suggestion",
+        "source": "model",
+        "at": "2026-10-10T19:38:45.522Z",
+        "details": "push"
+      },
+      {
+        "action": "suggestion",
+        "source": "user",
+        "at": "2026-10-10T19:38:45.873Z",
+        "details": "dismissed"
+      },
+      {
+        "action": "adaptation",
+        "source": "model",
+        "at": "2026-10-10T19:38:56.805Z",
+        "details": "Activity 25 → 40 seconds. Recovery 35 → 20 seconds."
+      },
+      {
+        "action": "adaptation",
+        "source": "model",
+        "at": "2026-10-10T19:39:11.623Z",
+        "details": "Session adjusted to fit remaining limit: 180 seconds remaining (5 slots trimmed)."
+      },
+      {
+        "action": "start-interval",
+        "intervalId": "slot-3-work",
         "source": "batch",
-        "at": "2026-10-09T12:44:38.822Z"
+        "at": "2026-10-10T19:39:24.091Z"
+      },
+      {
+        "action": "complete-interval",
+        "intervalId": "slot-3-work",
+        "source": "batch",
+        "at": "2026-10-10T19:39:24.091Z"
+      },
+      {
+        "action": "start-interval",
+        "intervalId": "slot-3-rest",
+        "source": "auto",
+        "at": "2026-10-10T19:39:24.091Z"
+      },
+      {
+        "action": "complete-interval",
+        "intervalId": "slot-3-rest",
+        "source": "batch",
+        "at": "2026-10-10T19:39:24.091Z"
       },
       {
         "action": "start-interval",
         "intervalId": "finish",
         "source": "batch",
-        "at": "2026-10-09T12:44:38.822Z"
+        "at": "2026-10-10T19:39:24.091Z"
       },
       {
         "action": "complete-interval",
         "intervalId": "finish",
         "source": "batch",
-        "at": "2026-10-09T12:44:38.822Z"
+        "at": "2026-10-10T19:39:24.091Z"
       }
     ],
-    "startedAt": "2026-10-09T12:43:49.324Z",
-    "endedAt": "2026-10-09T12:44:38.822Z",
+    "startedAt": "2026-10-10T19:37:50.675Z",
+    "endedAt": "2026-10-10T19:39:24.091Z",
+    "efforts": [
+      {
+        "slot": 1,
+        "score": 5,
+        "at": "2026-10-10T19:38:08.221Z"
+      },
+      {
+        "slot": 2,
+        "score": 1,
+        "at": "2026-10-10T19:38:31.191Z"
+      }
+    ],
     "completionMode": "batch-simulated"
   },
   "recap": {
     "totalPlannedSeconds": 720,
-    "simulatedSecondsCompleted": 360,
-    "completedCount": 6,
+    "simulatedSecondsCompleted": 420,
+    "completedCount": 8,
     "skippedCount": 0,
-    "removedCount": 12,
+    "removedCount": 10,
     "totalIntervals": 18,
     "adaptationsApplied": [
       "Activity 40 → 25 seconds. Recovery 20 → 35 seconds.",
-      "Session adjusted to fit remaining limit: 240 seconds remaining (6 slots trimmed)."
+      "Activity 25 → 40 seconds. Recovery 35 → 20 seconds.",
+      "Session adjusted to fit remaining limit: 180 seconds remaining (5 slots trimmed)."
     ]
   }
 }

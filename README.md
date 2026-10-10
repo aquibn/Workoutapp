@@ -44,12 +44,12 @@ Once a session starts, the intro and settings collapse so the session leads, on 
 
 | Mode | Status |
 | --- | --- |
-| **Mock** | Tested: `npm run check` (typecheck, lint, 71 unit tests) and `npm run test:ui` (28 Playwright tests, run with Google Chrome 154 via `PLAYWRIGHT_CHROME_PATH`), plus a manual click-through in the browser. Node 26.7 on macOS. |
-| **ClaudeCLI** | **Tested live** on 9 October 2026: Claude Code 2.1.278 with a Claude-plan login; the CLI reported `claude-sonnet-5`. One scripted 8-turn session: "too intense" → `Proposal("ease")`, applied; "shorten it" → asked how much time was left; "I only have 4 minutes left" → `Proposal("shorten", 240)`, applied; "my knee hurts" → the simulation/safety boundary and a suggestion to pause or end. Both adaptations are recorded with `source: "model"`. The export is in `runs/claude-cli-live.json` and a screenshot in `evidence/screenshots/06-live-claude.png`. The consent flow is also covered by the browser tests with a faked response. The run was recorded on an earlier version. Since then the skill has gained effort check-ins, `Suggest` and "harder", and the component catalog sent to the model has changed, so this run does not cover those parts; a fresh live run is still to do. |
+| **Mock** | Tested: `npm run check` (typecheck, lint, 73 unit tests) and `npm run test:ui` (28 Playwright tests, run with Google Chrome 154 via `PLAYWRIGHT_CHROME_PATH`), plus a manual click-through in the browser. Node 26.7 on macOS. |
+| **ClaudeCLI** | **Tested live** on 11 October 2026 against this version (the run records the same skill hash as `skills/workout.md`): Claude Code 2.1.278 with a Claude-plan login; the CLI reported `claude-sonnet-5`. One scripted session, 12 model turns: button presses got matching one-line comments; **Effort 5** → `Suggest("ease")`, accepted; **Effort 1** after easing → `Suggest("push")`, declined; "this feels too easy now" → `Proposal("push")`, applied; "shorten it" → asked how much time was left; "I only have 3 minutes left" → `Proposal("shorten", 180)`, applied; "my knee hurts" → the simulation/safety boundary and a suggestion to pause or end. An earlier attempt exposed a real failure: the model sometimes JSON-escapes its reply twice, so line breaks arrive as `\n` and quotes as `\"`, which broke its `Suggest` fence. The server now decodes exactly that case before validation (see `decodeDoubleEscapedReply`), using the failing reply as a test case. The export is `runs/claude-cli-live.json`; the screenshot is `evidence/screenshots/06-live-claude.png`. |
 | **OpenAIAPI** | Adapter unit tests with fake transports only. No live request. |
 | **CodexCLI** | Disabled by the starter; not tested. |
 
-Mock is deterministic. It mirrors the skill's Proposal protocol for the requests listed above, but it does not read `skills/workout.md`. The live Claude check is one session, not a broad evaluation of model behaviour.
+Mock is deterministic. It mirrors the skill's Proposal and Suggest protocol for the requests listed above, but it does not read `skills/workout.md`. The live Claude check is one session, not a broad evaluation of model behaviour.
 
 ## Project layout
 

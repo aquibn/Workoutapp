@@ -15,7 +15,7 @@ import {
 } from '../dist/shared/workout/session.js';
 import { renderWorkoutProgram, extractProposal } from '../dist/shared/workout/openui-bridge.js';
 import { mockTurn, parseTargetSeconds } from '../dist/server/mock.js';
-import { createApp, readConfig } from '../dist/server/app.js';
+import { createApp, readConfig, decodeDoubleEscapedReply } from '../dist/server/app.js';
 import { parseWorkoutSnapshot, recordEffort, slotAwaitingEffort, suggest, dismissSuggestion } from '../dist/shared/workout/session.js';
 import { extractSuggestion } from '../dist/shared/workout/openui-bridge.js';
 import { validateProgram } from '../dist/shared/openui/validate.js';
@@ -525,4 +525,36 @@ test('session screens carry a valid plan strip and the recap lists effort rating
   assert.doesNotThrow(() => validateProgram(checkin, OPENUI_LIBRARY));
   const recap = renderWorkoutProgram(endSession(session));
   assert.match(recap, /Effort ratings by slot: 1: 2\/5/);
+});
+
+// The exact reply a live Claude run produced: JSON-escaped twice, so line breaks are "\\n" and quotes "\\"".
+const escapedReply = String.raw`That one felt very easy — pushing the pace a bit for the remaining slots could help if you'd like; it's your call.\n\n` + '```openui' + String.raw`\nsuggestion1 = Suggest(\"push\")\n` + '```';
+
+test('a double-escaped reply is decoded; anything else is left alone', () => {
+  assert.equal(decodeDoubleEscapedReply(escapedReply), "That one felt very easy — pushing the pace a bit for the remaining slots could help if you'd like; it's your call.\n\n```openui\nsuggestion1 = Suggest(\"push\")\n```");
+  assert.equal(extractSuggestion(decodeDoubleEscapedReply(escapedReply)), 'push');
+  assert.equal(extractSuggestion(decodeDoubleEscapedReply('```openui' + String.raw`\nsuggestion1 = Suggest(\"ease\")\n` + '```')), 'ease');
+  assert.equal(decodeDoubleEscapedReply('Two\nreal lines with a literal \\n'), 'Two\nreal lines with a literal \\n');
+  assert.equal(decodeDoubleEscapedReply('No fence \\n here'), 'No fence \\n here');
+  const undecodable = String.raw`Broken "quote` + String.raw`\n` + '```openui' + String.raw`\nx = Suggest(\"ease\")\n` + '```';
+  assert.equal(decodeDoubleEscapedReply(undecodable), undecodable);
+});
+
+test('server accepts a provider reply whose fence came back with escaped line breaks', async () => {
+  const checkinScreen = renderWorkoutProgram(completeActiveInterval(startInterval(startSession(createWorkoutSession()), 'opening')));
+  const transport = async () => new Response(JSON.stringify({ status: 'completed', output: [{ type: 'message', content: [{ type: 'output_text', text: JSON.stringify({ reply: escapedReply }) }] }] }));
+  const server = createApp(readConfig({ ALLOW_LIVE_API: 'true', OPENAI_API_KEY: 'fake' }, process.cwd()), transport);
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const url = 'http://127.0.0.1:' + server.address().port;
+  try {
+    const { token } = await (await fetch(url + '/api/config')).json();
+    const response = await fetch(url + '/api/turn', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Local-Token': token },
+      body: JSON.stringify({ provider: 'openai-api', consent: true, fault: 'none', messages: [{ role: 'user', content: 'Effort 1 · very easy' }], state: { ui_state: checkinScreen, client_events: [] } }),
+    });
+    assert.equal(response.status, 200);
+    assert.equal(extractSuggestion((await response.json()).turn.reply), 'push');
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+  }
 });
