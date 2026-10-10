@@ -1,7 +1,7 @@
 import { serializeStatement } from '../shared/openui/serialize.js';
 import type { RequestData, Turn } from '../shared/contracts.js';
 import { ScreenDocument } from '../shared/openui/document.js';
-import { applyAdaptation, createWorkoutSession, parseWorkoutSnapshot } from '../shared/workout/session.js';
+import { applyAdaptation, createWorkoutSession, parseWorkoutSnapshot, suggest } from '../shared/workout/session.js';
 import { renderWorkoutProgram } from '../shared/workout/openui-bridge.js';
 import type { WorkoutSession } from '../shared/workout/types.js';
 
@@ -28,21 +28,42 @@ export function mockTurn(request: RequestData, fixture: string): Turn {
     return say('This is a simulated workout prototype, not medical advice. Please pause or end the session if you feel discomfort.');
   }
 
+  // An effort rating gets a suggestion, never a change: the user decides at the check-in.
+  const effort = last.match(/^effort ([1-5])\b/);
+  if (effort) {
+    const score = Number(effort[1]);
+    const intent = score >= 4 ? 'ease' : score <= 2 ? 'push' : null;
+    if (intent && suggest(session, intent) !== session) {
+      return say(intent === 'ease' ? `A ${score} is a lot. I'd give the next slots more recovery; it's your call.` : `A ${score} sounds comfortable. You could try a stronger pace; it's your call.`, session, `suggestion1 = Suggest("${intent}")`);
+    }
+    return say(score === 3 ? 'That sounds about right. Keep this pace.' : `Thanks, noted a ${score}. The pace stays as it is.`);
+  }
+
+  if (/\b(harder|more intense|too easy|push me|step it up)\b/.test(last)) {
+    if (last === 'make it harder' && appliedByButton?.startsWith('Activity')) return say(`The slots ahead are now stronger. ${appliedByButton}`);
+    const result = applyAdaptation(session, { intent: 'push', revision: session.revision, sessionId: session.sessionId });
+    if (result.applied) return say(`Stepping up the slots ahead. ${result.summary}`, result.session, 'proposal1 = Proposal("push")');
+    return say(`No change needed. ${result.summary}`);
+  }
+
   if (/\b(easier|gentle|gentler|ease|slow down|lower intensity|too intense)\b/.test(last)) {
+    if (last === 'make it easier' && appliedByButton?.startsWith('Activity')) return say(`Upcoming slots now have more breathing room. ${appliedByButton}`);
     const result = applyAdaptation(session, { intent: 'ease', revision: session.revision, sessionId: session.sessionId });
     if (result.applied) return say(`Giving upcoming slots more breathing room. ${result.summary}`, result.session, 'proposal1 = Proposal("ease")');
-    if (appliedByButton?.startsWith('Activity')) return say(`Upcoming slots now have more breathing room. ${appliedByButton}`);
     return say(`No change needed. ${result.summary}`);
   }
 
   if (/\b(shorten|shorter|in a hurry|finish early|minutes? left|seconds? left|only have)\b/.test(last)) {
+    if (last === 'i have 5 minutes left' && appliedByButton?.startsWith('Session adjusted')) return say(`Done. ${appliedByButton}`);
     const seconds = parseTargetSeconds(last);
     if (seconds === null) return say('How many minutes do you have left? I will trim the remaining slots to fit.');
     const result = applyAdaptation(session, { intent: 'shorten', seconds, revision: session.revision, sessionId: session.sessionId });
     if (result.applied) return say(`Trimming the plan to fit ${formatSeconds(seconds)}. ${result.summary}`, result.session, `proposal1 = Proposal("shorten", ${seconds})`);
-    if (appliedByButton?.startsWith('Session adjusted')) return say(`Done. ${appliedByButton}`);
     return say(`The plan stays as it is. ${result.summary}`);
   }
+
+  if (last === 'apply suggestion' && appliedByButton) return say(`Done. ${appliedByButton}`);
+  if (last === 'not now') return say('No problem. The pace stays as it is.');
 
   if (/\b(keep going|feels good|feeling good|steady)\b/.test(last)) {
     return say('Keeping the current pace. Continue when you are ready.', session, 'proposal1 = Proposal("keep")');

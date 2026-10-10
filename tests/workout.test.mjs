@@ -16,7 +16,8 @@ import {
 import { renderWorkoutProgram, extractProposal } from '../dist/shared/workout/openui-bridge.js';
 import { mockTurn, parseTargetSeconds } from '../dist/server/mock.js';
 import { createApp, readConfig } from '../dist/server/app.js';
-import { parseWorkoutSnapshot } from '../dist/shared/workout/session.js';
+import { parseWorkoutSnapshot, recordEffort, slotAwaitingEffort, suggest, dismissSuggestion } from '../dist/shared/workout/session.js';
+import { extractSuggestion } from '../dist/shared/workout/openui-bridge.js';
 import { validateProgram } from '../dist/shared/openui/validate.js';
 import { OPENUI_LIBRARY } from '../dist/shared/openui/openui-library.js';
 
@@ -455,4 +456,73 @@ test('server rejects a malformed workout snapshot before calling any provider', 
   } finally {
     await new Promise(resolve => server.close(resolve));
   }
+});
+
+test('ease and push move untouched slots one pace level and keep 60-second slots', () => {
+  const fresh = startSession(createWorkoutSession());
+  const pushed = applyAdaptation(fresh, { intent: 'push', revision: fresh.revision });
+  assert.equal(pushed.summary, 'Activity 40 → 50 seconds. Recovery 20 → 10 seconds.');
+  assert.equal(pushed.session.profile, 'high-energy');
+  assert.equal(applyAdaptation(pushed.session, { intent: 'push', revision: pushed.session.revision }).applied, false);
+  const back = applyAdaptation(pushed.session, { intent: 'ease', revision: pushed.session.revision });
+  assert.equal(back.summary, 'Activity 50 → 40 seconds. Recovery 10 → 20 seconds.');
+  assert.equal(back.session.profile, 'steady');
+  assert.equal(calculateRemainingSeconds(back.session), 720);
+});
+
+test('an effort rating is taken once per slot, only at the check-in after its recovery', () => {
+  let session = completeActiveInterval(startInterval(startSession(createWorkoutSession()), 'opening'));
+  assert.equal(slotAwaitingEffort(session), null);
+  assert.equal(recordEffort(session, 4), session);
+  session = completeActiveInterval(startInterval(session, 'slot-1-work'));
+  session = completeActiveInterval(session);
+  assert.equal(slotAwaitingEffort(session), 1);
+  assert.equal(recordEffort(session, 0), session);
+  session = recordEffort(session, 4);
+  assert.deepEqual(session.efforts.map(e => [e.slot, e.score]), [[1, 4]]);
+  assert.equal(slotAwaitingEffort(session), null);
+  assert.equal(recordEffort(session, 2), session);
+  assert.ok(parseWorkoutSnapshot(JSON.stringify(session)));
+});
+
+test('a suggestion waits at the check-in and disappears with any other change', () => {
+  let session = completeActiveInterval(startInterval(startSession(createWorkoutSession()), 'opening'));
+  session = suggest(session, 'ease');
+  assert.deepEqual(session.suggestion, { intent: 'ease' });
+  assert.equal(session.profile, 'steady');
+  assert.equal(dismissSuggestion(session).suggestion, undefined);
+  assert.equal(startInterval(session).suggestion, undefined);
+  const gentle = applyAdaptation(session, { intent: 'ease', revision: session.revision }).session;
+  assert.equal(suggest(gentle, 'ease'), gentle);
+  const running = startInterval(gentle);
+  assert.equal(suggest(running, 'push'), running);
+});
+
+test('extractSuggestion takes exactly one well-formed Suggest', () => {
+  assert.equal(extractSuggestion('Your call.\n```openui\nsuggestion1 = Suggest("ease")\n```'), 'ease');
+  assert.equal(extractSuggestion('Suggest("ease") in prose only'), null);
+  assert.equal(extractSuggestion('```openui\nsuggestion1 = Suggest("shorten")\n```'), null);
+  assert.equal(extractSuggestion('```openui\na = Suggest("ease")\nb = Suggest("push")\n```'), null);
+});
+
+test('mock answers an effort rating with a suggestion, never a change', () => {
+  let session = completeActiveInterval(startInterval(startSession(createWorkoutSession()), 'opening'));
+  session = completeActiveInterval(completeActiveInterval(startInterval(session, 'slot-1-work')));
+  const rate = (s, text) => mockTurn({ messages: [{ role: 'user', content: text }], state: { ui_state: '', client_events: [], workout: JSON.stringify(s) } }, '').reply;
+  const hard = rate(recordEffort(session, 5), 'Effort 5 · very hard');
+  assert.equal(extractSuggestion(hard), 'ease');
+  assert.equal(extractProposal(hard, session.revision), null);
+  assert.equal(extractSuggestion(rate(recordEffort(session, 3), 'Effort 3 · about right')), null);
+  const strong = applyAdaptation(session, { intent: 'push', revision: session.revision }).session;
+  assert.equal(extractSuggestion(rate(strong, 'Effort 1 · very easy')), null);
+});
+
+test('session screens carry a valid plan strip and the recap lists effort ratings', () => {
+  let session = completeActiveInterval(startInterval(startSession(createWorkoutSession()), 'opening'));
+  session = recordEffort(completeActiveInterval(completeActiveInterval(startInterval(session, 'slot-1-work'))), 2);
+  const checkin = renderWorkoutProgram(session);
+  assert.match(checkin, /planStrip = PlanStrip\(\["opening:completed:120","activity:completed:40","recovery:completed:20","activity:pending:40"/);
+  assert.doesNotThrow(() => validateProgram(checkin, OPENUI_LIBRARY));
+  const recap = renderWorkoutProgram(endSession(session));
+  assert.match(recap, /Effort ratings by slot: 1: 2\/5/);
 });

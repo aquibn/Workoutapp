@@ -19,6 +19,9 @@ export const renderers: Record<string,(node:StatementNode,context:Context)=>HTML
     const update=()=>{const entry=c.timers.list().find(t=>t.id===key);if(!entry)return;const seconds=Math.ceil(entry.remaining);value.textContent=`${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;status.textContent=entry.status;start.hidden=entry.status==='running'||entry.status==='paused';start.textContent=entry.status==='done'?'Restart simulation':'Start simulation';pause.hidden=entry.status==='stopped'||entry.status==='done';pause.textContent=entry.status==='paused'?'Resume timer':'Pause timer';for(const b of [start,pause,reset,finish])b.disabled=c.paused;};
     c.updates.push(update);update();return n;
   },
+  // Each cell is "kind:status:seconds"; width follows duration so the shape of the plan is visible.
+  PlanStrip: ({props:p}) => {const cells=(p.cells as string[]).map(v=>v.split(':'));const n=el('div','','plan-strip');n.setAttribute('role','img');n.setAttribute('aria-label',`${cells.filter(([,s])=>s==='completed').length} of ${cells.filter(([,s])=>s!=='removed').length} intervals done`);for(const [kind,status,seconds] of cells){const cell=el('span','',`${kind} ${status}`);cell.style.flexGrow=seconds;n.append(cell);}return n;},
+  Suggest: ({props:p}) => el('div', `Coach suggestion: ${String(p.intent)}`, 'micro proposal-pill'),
   Proposal: ({props:p}) => el('div', `Adjustment proposal: ${String(p.intent)}${p.seconds ? ` (${p.seconds}s)` : ''}`, 'micro proposal-pill'),
 };
 export function renderComponent(node:StatementNode,context:Context):HTMLElement {

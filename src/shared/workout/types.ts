@@ -1,7 +1,7 @@
 export type WorkoutStage = 'welcome' | 'preview' | 'active' | 'checkin' | 'recap';
 export type IntervalKind = 'opening' | 'activity' | 'recovery' | 'finish';
 export type IntervalStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'removed';
-export type EnergyProfile = 'steady' | 'low-energy';
+export type EnergyProfile = 'low-energy' | 'steady' | 'high-energy';
 export type ActivityLabel = 'Tempo squat' | 'Standing reach';
 
 export interface WorkoutInterval {
@@ -15,7 +15,8 @@ export interface WorkoutInterval {
   completedAt?: number;
 }
 
-export type ProposalIntent = 'keep' | 'ease' | 'shorten';
+export type ProposalIntent = 'keep' | 'ease' | 'push' | 'shorten';
+export type SuggestionIntent = 'ease' | 'push';
 
 export interface WorkoutProposal {
   intent: ProposalIntent;
@@ -31,7 +32,9 @@ export type WorkoutActionKind =
   | 'skip-interval'
   | 'end-session'
   | 'restart'
-  | 'adaptation';
+  | 'adaptation'
+  | 'effort'
+  | 'suggestion';
 
 export interface WorkoutActionRecord {
   action: WorkoutActionKind;
@@ -48,6 +51,13 @@ export interface AdaptationRecord {
   revision: number;
 }
 
+// A 1-5 rating of how hard a main slot felt, given at the check-in after its recovery.
+export interface EffortRecord {
+  slot: number;
+  score: number;
+  at: string;
+}
+
 export interface WorkoutSession {
   sessionId: string;
   revision: number;
@@ -58,6 +68,9 @@ export interface WorkoutSession {
   adaptationHistory: AdaptationRecord[];
   actionHistory?: WorkoutActionRecord[];
   completionMode?: 'completed' | 'batch-simulated' | 'ended-early';
+  efforts?: EffortRecord[];
+  // A change the coach suggested at a check-in; it applies only if the user accepts it.
+  suggestion?: { intent: SuggestionIntent };
   startedAt: string | null;
   endedAt: string | null;
 }

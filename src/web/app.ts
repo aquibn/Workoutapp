@@ -8,8 +8,8 @@ import type { StatementNode } from '../shared/openui/openui-model.js';
 import { redactValue } from '../shared/redact.js';
 import { renderComponent } from './components.js';
 import { byId,button,el } from './dom.js';
-import { applyAdaptation, calculateRemainingSeconds, completeActiveInterval, createWorkoutSession, endSession, getRecapSummary, startInterval, startSession } from '../shared/workout/session.js';
-import { extractProposal, formatClock, intervalTimerKey, renderWorkoutProgram } from '../shared/workout/openui-bridge.js';
+import { applyAdaptation, calculateRemainingSeconds, completeActiveInterval, createWorkoutSession, dismissSuggestion, endSession, getRecapSummary, recordEffort, startInterval, startSession, suggest } from '../shared/workout/session.js';
+import { EFFORT_LABELS, extractProposal, extractSuggestion, formatClock, intervalTimerKey, renderWorkoutProgram } from '../shared/workout/openui-bridge.js';
 import type { WorkoutActionRecord, WorkoutSession } from '../shared/workout/types.js';
 
 type Config={providers:ProviderStatus[];token:string};let config:Config|undefined;
@@ -54,7 +54,7 @@ function render(){
   byId<HTMLButtonElement>('pause').disabled=!screens.length;byId('pause').textContent=paused?'Resume':'Pause';byId('paused').hidden=!paused;
   const cues=(c.document.current?.props.children as StatementNode[]??[]).filter(n=>n.name==='Cue').map(n=>String(n.props.text));byId('spoken').textContent=cues.join(' ')||c.document.prose||'The coach\'s cues for the current screen appear here.';
   byId('state-json').textContent=JSON.stringify({ui_state:c.document.echo(),client_events:c.clientEvents,timers:timers.list(),workout},null,2);byId<HTMLButtonElement>('export').disabled=c.pending||!c.events.length;
-  const inSession=workoutActive&&!['welcome','recap'].includes(workout.stage);byId('btn-sim-remaining').hidden=!inSession;byId<HTMLButtonElement>('btn-sim-remaining').disabled=paused||c.pending;byId('workout-actions').hidden=!inSession;
+  document.body.classList.toggle('in-session',workoutActive);const inSession=workoutActive&&!['welcome','recap'].includes(workout.stage);byId('btn-sim-remaining').hidden=!inSession;byId<HTMLButtonElement>('btn-sim-remaining').disabled=paused||c.pending;byId('workout-actions').hidden=!inSession;
 }
 byId<HTMLFormElement>('composer').addEventListener('submit',event=>{event.preventDefault();const text=draft.value.trim();if(text){draft.value='';send(text,true);}});
 draft.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();byId<HTMLFormElement>('composer').requestSubmit();}});
@@ -80,7 +80,7 @@ let lastSendTyped = false;
 // interval finishing, an adaptation, a restart) makes that request's Proposal stale.
 let sentRevision: { sessionId: string; revision: number } | null = null;
 
-type WorkoutAction = 'start-session' | 'start-interval' | 'complete-interval' | 'end-session' | 'restart' | 'ease' | 'shorten' | 'skip-ahead';
+type WorkoutAction = 'start-session' | 'start-interval' | 'complete-interval' | 'end-session' | 'restart' | 'ease' | 'push' | 'shorten' | 'skip-ahead' | 'effort' | 'apply-suggestion' | 'dismiss-suggestion';
 
 function activeRemaining(): number | undefined {
   const id = workout.activeIntervalId;
@@ -102,6 +102,8 @@ function showWorkout(event?: string) {
     c.localEvent(activityClientEvents.startedTimer(active.label, active.durationSeconds), false);
   }
   render();
+  // On a phone the re-rendered screen can end up above the viewport; bring it back.
+  if (byId('screen').getBoundingClientRect().top < 0) byId('screen').scrollIntoView({ block: 'start' });
 }
 
 function dispatch(action: WorkoutAction, arg?: string | number, source: WorkoutActionRecord['source'] = 'user') {
@@ -139,13 +141,29 @@ function dispatch(action: WorkoutAction, arg?: string | number, source: WorkoutA
       record(action, source);
       return showWorkout('Restarted demo session.');
     case 'ease':
-    case 'shorten': {
+    case 'push':
+    case 'shorten':
+    case 'apply-suggestion': {
+      const intent = action === 'apply-suggestion' ? workout.suggestion?.intent : action;
+      if (!intent) return;
       const seconds = typeof arg === 'number' ? arg : undefined;
-      const result = applyAdaptation(workout, { intent: action, seconds, revision: workout.revision, sessionId: workout.sessionId }, activeRemaining());
+      const result = applyAdaptation(workout, { intent, seconds, revision: workout.revision, sessionId: workout.sessionId }, activeRemaining());
       if (!result.applied) return render();
       workout = result.session;
-      record('adaptation', source, undefined, result.summary);
+      record('adaptation', source, undefined, action === 'apply-suggestion' ? `Accepted coach suggestion. ${result.summary}` : result.summary);
       return showWorkout('Adaptation applied: ' + result.summary);
+    }
+    case 'dismiss-suggestion':
+      if (!workout.suggestion) return;
+      workout = dismissSuggestion(workout);
+      record('suggestion', source, undefined, 'dismissed');
+      return showWorkout('Suggestion dismissed.');
+    case 'effort': {
+      const before = workout.revision;
+      workout = recordEffort(workout, Number(arg));
+      if (workout.revision === before) return;
+      record('effort', source, undefined, `${arg}/5`);
+      return showWorkout(`Effort rated ${arg} of 5.`);
     }
     case 'skip-ahead':
       if (activeId) timers.finish(intervalTimerKey(activeId));
@@ -172,6 +190,10 @@ const OPTIONS: Record<string, [WorkoutAction, (string | number)?]> = {
   'Start opening': ['start-interval', 'opening'],
   'Continue next slot': ['start-interval'],
   'Make it easier': ['ease'],
+  'Make it harder': ['push'],
+  'Apply suggestion': ['apply-suggestion'],
+  'Not now': ['dismiss-suggestion'],
+  ...Object.fromEntries(EFFORT_LABELS.map((label, i) => [label, ['effort', i + 1]])),
   'I have 5 minutes left': ['shorten', 300],
   'End session': ['end-session'],
   'Restart demo session': ['restart'],
@@ -209,8 +231,22 @@ function workoutSnapshot(): string | null {
 // Returns true when the reply belongs to the workout, so its fences are not applied as a screen.
 function onCoachReply(reply: string): boolean {
   if (!workoutActive) return false;
-  const proposal = sentRevision && extractProposal(reply, sentRevision.revision, sentRevision.sessionId);
-  if (!proposal) return true;
+  // Only an answer to typed text may carry a Proposal; a comment on a button press never
+  // changes the plan, because the button has already made its change.
+  const proposal = lastSendTyped && sentRevision && extractProposal(reply, sentRevision.revision, sentRevision.sessionId);
+  if (!proposal) {
+    // A suggestion is shown only if nothing has changed since the rating it answers.
+    const intent = extractSuggestion(reply);
+    if (intent && sentRevision?.sessionId === workout.sessionId && sentRevision.revision === workout.revision) {
+      const offered = suggest(workout, intent);
+      if (offered !== workout) {
+        workout = offered;
+        record('suggestion', 'model', undefined, intent);
+        showWorkout();
+      }
+    }
+    return true;
+  }
   const result = applyAdaptation(workout, proposal, activeRemaining());
   if (/^Stale/.test(result.summary)) {
     c.localEvent('Coach proposal not applied: the session moved on while the reply was in progress. Ask again if you still want it.', false);

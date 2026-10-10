@@ -12,4 +12,6 @@ export const OPENUI_LIBRARY = {
   Cue: { args: ["text"], required: 1 },
   FollowUps: { args: ["prompts"], required: 1 },
   Proposal: { args: ["intent", "seconds"], required: 1 },
+  PlanStrip: { args: ["cells"], required: 1 },
+  Suggest: { args: ["intent"], required: 1 },
 } as const satisfies Record<string, StatementSpec>;

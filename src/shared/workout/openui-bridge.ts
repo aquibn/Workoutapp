@@ -1,8 +1,8 @@
 import { serializeStatement } from '../openui/serialize.js';
 import { callArgsOf } from '../openui/parse-document.js';
 import { splitReply } from '../openui/document.js';
-import type { ProposalIntent, WorkoutInterval, WorkoutProposal, WorkoutSession } from './types.js';
-import { calculateRemainingSeconds, getRecapSummary } from './session.js';
+import type { ProposalIntent, SuggestionIntent, WorkoutInterval, WorkoutProposal, WorkoutSession } from './types.js';
+import { calculateRemainingSeconds, getRecapSummary, slotAwaitingEffort } from './session.js';
 
 // Screens are rendered from session state on every change; the model never draws them.
 
@@ -28,6 +28,13 @@ const screen = (name: string, parts: Part[], listItems: Part[] = []) => [
   ...listItems.map(([, statement]) => statement),
 ].join('\n');
 
+export const EFFORT_LABELS = ['Effort 1 · very easy', 'Effort 2', 'Effort 3 · about right', 'Effort 4', 'Effort 5 · very hard'];
+const PACES = { 'low-energy': '25s work / 35s rest', steady: '40s work / 20s rest', 'high-energy': '50s work / 10s rest' };
+const SUGGESTIONS: Record<SuggestionIntent, string> = {
+  ease: 'Coach suggests more recovery in the slots ahead.',
+  push: 'Coach suggests a stronger pace in the slots ahead.',
+};
+
 const CUES: Record<WorkoutInterval['kind'], string> = {
   opening: 'Simulated warm-up in progress. Your first main slot follows.',
   activity: 'Simulated work slot in progress. Recovery follows.',
@@ -45,8 +52,9 @@ function heading(session: WorkoutSession, interval: WorkoutInterval): string {
 }
 
 export function renderWorkoutProgram(session: WorkoutSession, activeTimerRemaining?: number): string {
+  const strip = part('planStrip', 'PlanStrip', [session.intervals.map(i => `${i.kind}:${i.status}:${i.durationSeconds}`)]);
   const remaining = formatClock(calculateRemainingSeconds(session, activeTimerRemaining));
-  const pace = session.profile === 'low-energy' ? '25s work / 35s rest' : '40s work / 20s rest';
+  const pace = PACES[session.profile];
   const next = session.intervals.find(i => i.status === 'pending');
   const active = session.intervals.find(i => i.id === session.activeIntervalId);
 
@@ -71,9 +79,10 @@ export function renderWorkoutProgram(session: WorkoutSession, activeTimerRemaini
     ]);
     return screen('previewScreen', [
       part('previewTitle', 'Text', [`Session preview (${remaining})`, 'title']),
+      strip,
       plan,
       part('remainingStat', 'Keyword', [remaining, 'Total planned time']),
-      part('previewActions', 'FollowUps', [['Start opening', 'Make it easier', 'I have 5 minutes left']]),
+      part('previewActions', 'FollowUps', [['Start opening', 'Make it easier', 'Make it harder', 'I have 5 minutes left']]),
       part('previewCue', 'Cue', ['This demo has an opening, main slots, and a finish. You can ease the pace or shorten it along the way.']),
     ], planItems);
   }
@@ -81,21 +90,31 @@ export function renderWorkoutProgram(session: WorkoutSession, activeTimerRemaini
   if (session.stage === 'active' && active) {
     return screen('activeScreen', [
       part('activeTitle', 'Text', [heading(session, active), 'subtitle']),
+      strip,
       part(intervalTimerKey(active.id), 'Timer', [active.label, active.durationSeconds]),
       part('nextNotice', 'Text', [next ? `Up next: ${next.label} (${next.durationSeconds}s)` : 'Final interval in progress', 'description']),
       part('remainingStat', 'Keyword', [remaining, 'Remaining planned time']),
-      part('activeActions', 'FollowUps', [['Make it easier', 'I have 5 minutes left', 'End session']]),
+      part('activeActions', 'FollowUps', [['Make it easier', 'Make it harder', 'I have 5 minutes left', 'End session']]),
       part('activeCue', 'Cue', [CUES[active.kind]]),
     ]);
   }
 
   if (session.stage !== 'recap') {
+    // After a recovery the check-in asks for an effort rating first; a coach suggestion,
+    // if there is one, waits for the user's answer instead of applying itself.
+    const rateSlot = slotAwaitingEffort(session);
+    const prompt: Part[] = rateSlot !== null
+      ? [part('effortQuestion', 'Text', [`How hard was slot ${rateSlot}?`, 'description']), part('effortOptions', 'FollowUps', [EFFORT_LABELS])]
+      : session.suggestion
+        ? [part('suggestionText', 'Text', [SUGGESTIONS[session.suggestion.intent], 'description']), part('suggestionOptions', 'FollowUps', [['Apply suggestion', 'Not now']])]
+        : [];
     return screen('checkinScreen', [
       part('checkinTitle', 'Text', ['How does this pace fit?', 'title']),
-      part('checkinSubtitle', 'Text', ['Keep it steady, or give upcoming rounds more recovery.', 'subtitle']),
+      strip,
+      ...prompt,
       part('nextNotice', 'Text', [next ? `Ready for: ${next.label} (${next.durationSeconds}s)` : 'Ready to finish', 'description']),
       part('remainingStat', 'Keyword', [remaining, 'Remaining planned time']),
-      part('checkinActions', 'FollowUps', [['Continue next slot', 'Make it easier', 'I have 5 minutes left', 'End session']]),
+      part('checkinActions', 'FollowUps', [['Continue next slot', 'Make it easier', 'Make it harder', 'I have 5 minutes left', 'End session']]),
       part('checkinCue', 'Cue', ['The previous slot is complete in the simulation. Continue when you are ready, or adjust the remaining plan.']),
     ]);
   }
@@ -108,6 +127,7 @@ export function renderWorkoutProgram(session: WorkoutSession, activeTimerRemaini
   if (recap.skippedCount) lines.push(['skippedItem', `${plural(recap.skippedCount, 'interval')} skipped`, 'minus']);
   if (recap.removedCount) lines.push(['removedItem', `${plural(recap.removedCount, 'interval')} removed by adaptation`, 'bullet']);
   recap.adaptationsApplied.forEach((summary, i) => lines.push([`adaptItem${i}`, summary, 'bullet']));
+  if (session.efforts?.length) lines.push(['effortItem', `Effort ratings by slot: ${session.efforts.map(e => `${e.slot}: ${e.score}/5`).join(', ')}`, 'bullet']);
   const [summary, ...summaryItems] = list('summaryList', lines);
 
   let subtitle = endedEarly ? 'Partial session summary.'
@@ -137,7 +157,7 @@ export function extractProposal(reply: string, expectedRevision?: number, expect
     const call = callArgsOf(line.trim());
     if (call?.name !== 'Proposal') continue;
     const [intent, seconds] = call.args;
-    if (intent?.k !== 'str' || !['keep', 'ease', 'shorten'].includes(intent.v)) return null;
+    if (intent?.k !== 'str' || !['keep', 'ease', 'push', 'shorten'].includes(intent.v)) return null;
     let target: number | undefined;
     if (intent.v === 'shorten') {
       if (seconds?.k !== 'num' || !Number.isInteger(seconds.v) || seconds.v <= 0 || seconds.v > 3600) return null;
@@ -149,4 +169,15 @@ export function extractProposal(reply: string, expectedRevision?: number, expect
     found.push(proposal);
   }
   return found.length === 1 ? found[0] : null;
+}
+
+// The coach's optional Suggest("ease" | "push") after an effort rating. Like a Proposal it
+// must be the only one in the reply's fences; unlike a Proposal it waits for the user.
+export function extractSuggestion(reply: string): SuggestionIntent | null {
+  let fences: string[];
+  try { fences = splitReply(reply).fences; } catch { return null; }
+  const found = fences.flatMap(fence => fence.split('\n')).map(line => callArgsOf(line.trim())).filter(call => call?.name === 'Suggest');
+  if (found.length !== 1) return null;
+  const [intent, extra] = found[0]!.args;
+  return intent?.k === 'str' && (intent.v === 'ease' || intent.v === 'push') && extra === undefined ? intent.v : null;
 }

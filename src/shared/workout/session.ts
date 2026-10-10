@@ -3,6 +3,7 @@ import type {
   AdaptationRecord,
   EnergyProfile,
   ProposalIntent,
+  SuggestionIntent,
   WorkoutInterval,
   WorkoutProposal,
   WorkoutRecapSummary,
@@ -11,7 +12,8 @@ import type {
 
 export const DEFAULT_PLANNED_SECONDS = 720;
 const SLOTS = 8;
-const PACE = { steady: { work: 40, rest: 20 }, 'low-energy': { work: 25, rest: 35 } } as const;
+const PACE = { 'low-energy': { work: 25, rest: 35 }, steady: { work: 40, rest: 20 }, 'high-energy': { work: 50, rest: 10 } } as const;
+const LEVELS: EnergyProfile[] = ['low-energy', 'steady', 'high-energy'];
 
 type Change = { session: WorkoutSession; applied: boolean; summary: string };
 
@@ -47,8 +49,9 @@ export function createWorkoutSession(profile: EnergyProfile = 'steady', id?: str
 }
 
 const now = () => new Date().toISOString();
+// Every change bumps the revision and drops a pending suggestion, which only makes sense at the moment it was offered.
 const bump = (session: WorkoutSession, patch: Partial<WorkoutSession>): WorkoutSession =>
-  ({ ...session, ...patch, revision: session.revision + 1 });
+  ({ ...session, suggestion: undefined, ...patch, revision: session.revision + 1 });
 const replaceAt = (intervals: WorkoutInterval[], index: number, patch: Partial<WorkoutInterval>) =>
   intervals.map((item, i) => (i === index ? { ...item, ...patch } : item));
 
@@ -138,19 +141,46 @@ function adapted(session: WorkoutSession, intent: ProposalIntent, intervals: Wor
   return { session: bump(session, { ...patch, intervals, adaptationHistory: [...session.adaptationHistory, record] }), applied: true, summary };
 }
 
-function ease(session: WorkoutSession): Change {
-  const { work, rest } = PACE['low-energy'];
+// Ease and push move the untouched slots one pace level down or up. Every level keeps a
+// slot at 60 seconds, so the session length does not change.
+function shift(session: WorkoutSession, intent: SuggestionIntent): Change {
+  const level = LEVELS.indexOf(session.profile) + (intent === 'ease' ? -1 : 1);
+  const target = LEVELS[level];
+  const limit = intent === 'ease' ? 'Upcoming slots are already on the gentle profile or cannot be adapted.' : 'Upcoming slots are already at the strongest pace or cannot be adapted.';
+  if (!target) return { session, applied: false, summary: limit };
+  const from = PACE[session.profile], to = PACE[target];
   const intervals = [...session.intervals];
-  let changed = 0;
-  for (const [w, r] of untouchedSlots(intervals)) {
-    if (intervals[w].durationSeconds === work && intervals[r].durationSeconds === rest) continue;
-    intervals[w] = { ...intervals[w], durationSeconds: work };
-    intervals[r] = { ...intervals[r], durationSeconds: rest };
-    changed++;
+  const slots = untouchedSlots(intervals);
+  for (const [w, r] of slots) {
+    intervals[w] = { ...intervals[w], durationSeconds: to.work };
+    intervals[r] = { ...intervals[r], durationSeconds: to.rest };
   }
-  if (!changed) return { session, applied: false, summary: 'Upcoming slots are already on the gentle profile or cannot be adapted.' };
-  return adapted(session, 'ease', intervals, 'Activity 40 → 25 seconds. Recovery 20 → 35 seconds.', { profile: 'low-energy' });
+  if (!slots.length) return { session, applied: false, summary: limit };
+  return adapted(session, intent, intervals, `Activity ${from.work} → ${to.work} seconds. Recovery ${from.rest} → ${to.rest} seconds.`, { profile: target });
 }
+
+// The slot whose recovery just finished, if the user is at that check-in and has not rated it yet.
+export function slotAwaitingEffort(session: WorkoutSession): number | null {
+  if (session.stage !== 'checkin') return null;
+  const last = session.intervals.filter(i => i.status === 'completed' || i.status === 'skipped').at(-1);
+  if (last?.kind !== 'recovery') return null;
+  const slot = Number(last.id.split('-')[1]);
+  return session.efforts?.some(e => e.slot === slot) ? null : slot;
+}
+
+export function recordEffort(session: WorkoutSession, score: number): WorkoutSession {
+  const slot = slotAwaitingEffort(session);
+  if (slot === null || !Number.isInteger(score) || score < 1 || score > 5) return session;
+  return bump(session, { efforts: [...(session.efforts ?? []), { slot, score, at: now() }] });
+}
+
+// Offered only at a check-in, and only if accepting it would actually change something.
+export function suggest(session: WorkoutSession, intent: SuggestionIntent): WorkoutSession {
+  if (session.stage !== 'checkin' || !shift(session, intent).applied) return session;
+  return bump(session, { suggestion: { intent } });
+}
+
+export const dismissSuggestion = (session: WorkoutSession) => (session.suggestion ? bump(session, {}) : session);
 
 // One pass over the untouched slots, last first, then the finish (never below 30s).
 // With overshoot off, a slot is dropped only if the plan stays at or above the target.
@@ -197,7 +227,7 @@ export function applyAdaptation(session: WorkoutSession, proposal: WorkoutPropos
   if (session.stage === 'recap') return { session, applied: false, summary: 'Session has already ended.' };
   if (proposal.sessionId && proposal.sessionId !== session.sessionId) return { session, applied: false, summary: 'Stale session identifier.' };
   if (proposal.revision !== undefined && proposal.revision !== session.revision) return { session, applied: false, summary: 'Stale proposal revision.' };
-  if (proposal.intent === 'ease') return ease(session);
+  if (proposal.intent === 'ease' || proposal.intent === 'push') return shift(session, proposal.intent);
   if (proposal.intent === 'shorten') return shorten(session, proposal.seconds ?? 300, activeTimerRemaining);
   return { session, applied: false, summary: 'Pace kept steady.' };
 }
@@ -212,7 +242,7 @@ export function validateWorkoutSession(raw: unknown): WorkoutSession | null {
   const s = raw as Record<string, unknown>;
   if (typeof s.sessionId !== 'string' || !s.sessionId.trim()) return null;
   if (!Number.isInteger(s.revision) || (s.revision as number) < 1) return null;
-  if (s.profile !== 'steady' && s.profile !== 'low-energy') return null;
+  if (!LEVELS.includes(s.profile as EnergyProfile)) return null;
   if (!STAGES.includes(s.stage as string)) return null;
   if (!Array.isArray(s.intervals) || s.intervals.length !== 2 * SLOTS + 2) return null;
 
@@ -226,8 +256,11 @@ export function validateWorkoutSession(raw: unknown): WorkoutSession | null {
   if (!wellFormed) return null;
 
   const history = s.adaptationHistory;
-  if (!Array.isArray(history) || !history.every(a => typeof a === 'object' && a !== null && ['keep', 'ease', 'shorten'].includes(a.intent) && typeof a.summary === 'string')) return null;
+  if (!Array.isArray(history) || !history.every(a => typeof a === 'object' && a !== null && ['keep', 'ease', 'push', 'shorten'].includes(a.intent) && typeof a.summary === 'string')) return null;
   if (s.actionHistory !== undefined && !Array.isArray(s.actionHistory)) return null;
+  if (s.efforts !== undefined && !(Array.isArray(s.efforts) && s.efforts.every(e => typeof e === 'object' && e !== null
+    && Number.isInteger(e.slot) && e.slot >= 1 && e.slot <= SLOTS && Number.isInteger(e.score) && e.score >= 1 && e.score <= 5))) return null;
+  if (s.suggestion !== undefined && !['ease', 'push'].includes((s.suggestion as { intent?: string } | null)?.intent ?? '')) return null;
 
   // Exactly one active interval in the 'active' stage, and none in any other.
   const active = intervals.filter(i => i.status === 'active');

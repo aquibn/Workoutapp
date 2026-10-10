@@ -240,3 +240,71 @@ test('a newer option press replaces a stale comment on an older one', async ({ p
  await expect(page.locator('#transcript')).not.toContainText('Opening warm-up is under way');
  await expect(page.locator('#transcript')).toContainText('Slot 1: Tempo squat is under way');
 });
+async function toFirstEffortCheckin(page) {
+ const button = name => page.locator('#screen').getByRole('button', { name, exact: true });
+ await tap(page, button('Start demo session'));
+ await tap(page, button('Start opening'));
+ await tap(page, button('Simulate finish'));
+ await tap(page, button('Continue next slot'));
+ await tap(page, button('Simulate finish'));
+ await tap(page, button('Simulate finish'));
+ await expect(page.locator('#screen')).toContainText('How hard was slot 1?');
+ return button;
+}
+test('an effort rating leads to a coach suggestion that applies only when accepted', async ({ page }) => {
+ const button = await toFirstEffortCheckin(page);
+ await tap(page, button('Effort 5 · very hard'));
+ await expect(page.locator('#screen')).toContainText('Coach suggests more recovery');
+ await evidence(page,'07-effort-suggestion',{fullPage:true});
+ let state = JSON.parse(await page.locator('#state-json').textContent()).workout;
+ expect(state.profile).toBe('steady');
+ expect(state.efforts.map(e => e.score)).toEqual([5]);
+ await tap(page, button('Apply suggestion'));
+ state = JSON.parse(await page.locator('#state-json').textContent()).workout;
+ expect(state.profile).toBe('low-energy');
+ expect(state.adaptationHistory).toHaveLength(1);
+ expect(state.actionHistory.at(-1).details).toMatch(/^Accepted coach suggestion/);
+ await expect(page.locator('#screen')).not.toContainText('Coach suggests');
+});
+test('declining a suggestion leaves the plan unchanged', async ({ page }) => {
+ const button = await toFirstEffortCheckin(page);
+ await tap(page, button('Effort 1 · very easy'));
+ await expect(page.locator('#screen')).toContainText('Coach suggests a stronger pace');
+ await tap(page, button('Not now'));
+ const state = JSON.parse(await page.locator('#state-json').textContent()).workout;
+ expect(state.profile).toBe('steady');
+ expect(state.adaptationHistory).toHaveLength(0);
+ await expect(page.locator('#screen')).not.toContainText('Coach suggests');
+});
+test('harder and easier each move exactly one pace level', async ({ page }) => {
+ const button = name => page.locator('#screen').getByRole('button', { name, exact: true });
+ await tap(page, button('Start demo session'));
+ await tap(page, button('Start opening'));
+ await tap(page, button('Make it harder'));
+ let state = JSON.parse(await page.locator('#state-json').textContent()).workout;
+ expect(state.profile).toBe('high-energy');
+ await tap(page, button('Make it easier'));
+ state = JSON.parse(await page.locator('#state-json').textContent()).workout;
+ expect(state.profile).toBe('steady');
+ expect(state.adaptationHistory.map(a => a.intent)).toEqual(['push', 'ease']);
+});
+test('once a session starts, the session leads on a phone', async ({ page }) => {
+ await page.setViewportSize({ width: 390, height: 844 });
+ await tap(page, page.locator('#screen').getByRole('button', { name: 'Start demo session', exact: true }));
+ await expect(page.locator('.intro')).toBeHidden();
+ const top = await page.locator('#screen').evaluate(e => e.getBoundingClientRect().top);
+ expect(top).toBeLessThan(300);
+ const order = await page.locator('.workspace > section').evaluateAll(s => s.map(e => e.className));
+ expect(order).toEqual(['preview', 'conversation']);
+});
+test('the plan strip shows every interval and marks removed ones', async ({ page }) => {
+ const button = name => page.locator('#screen').getByRole('button', { name, exact: true });
+ await tap(page, button('Start demo session'));
+ await expect(page.locator('.plan-strip span')).toHaveCount(18);
+ await tap(page, button('Start opening'));
+ await tap(page, button('I have 5 minutes left'));
+ const removed = JSON.parse(await page.locator('#state-json').textContent()).workout.intervals.filter(i => i.status === 'removed').length;
+ expect(removed).toBeGreaterThan(0);
+ await expect(page.locator('.plan-strip span.removed')).toHaveCount(removed);
+ await expect(page.locator('.plan-strip span.active')).toHaveCount(1);
+});

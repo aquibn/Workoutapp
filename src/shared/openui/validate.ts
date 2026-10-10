@@ -18,7 +18,9 @@ export const propValidators: Record<string, (p: Record<string, unknown>) => bool
   Timer: p => text(p.label) && Number.isInteger(p.seconds) && Number(p.seconds) > 0 && Number(p.seconds) <= 3600 && (p.image === undefined || p.image === null),
   Cue: p => text(p.text),
   FollowUps: p => Array.isArray(p.prompts) && p.prompts.length <= 6 && p.prompts.every(text),
-  Proposal: p => oneOf(p.intent, ['keep', 'ease', 'shorten']) && (p.intent === 'shorten' ? optional(p.seconds, v => Number.isInteger(v) && Number(v) > 0 && Number(v) <= 3600) : p.seconds === undefined || p.seconds === null),
+  PlanStrip: p => Array.isArray(p.cells) && p.cells.length > 0 && p.cells.length <= 24 && p.cells.every(v => typeof v === 'string' && /^(opening|activity|recovery|finish):(pending|active|completed|skipped|removed):\d{1,4}$/.test(v)),
+  Suggest: p => oneOf(p.intent, ['ease', 'push']),
+  Proposal: p => oneOf(p.intent, ['keep', 'ease', 'push', 'shorten']) && (p.intent === 'shorten' ? optional(p.seconds, v => Number.isInteger(v) && Number(v) > 0 && Number(v) <= 3600) : p.seconds === undefined || p.seconds === null),
 };
 export function validateProgram(code: string, library: Vocabulary = OPENUI_LIBRARY, validators = propValidators): StatementNode {
   if (code.length > 40000 || code.split('\n').length > 600) throw new Error('Screen program is full. Export and reset.');
